@@ -481,36 +481,6 @@ function get_category_or_system_context($categoryid) {
 }
 
 /**
- * Print the buttons relating to course requests.
- *
- * @param context $context current page context.
- * @deprecated since Moodle 4.0
- * @todo Final deprecation MDL-73976
- */
-function print_course_request_buttons($context) {
-    global $CFG, $DB, $OUTPUT;
-    debugging("print_course_request_buttons() is deprecated. " .
-        "This is replaced with the category_action_bar tertiary navigation.", DEBUG_DEVELOPER);
-    if (empty($CFG->enablecourserequests)) {
-        return;
-    }
-    if (course_request::can_request($context)) {
-        // Print a button to request a new course.
-        $params = [];
-        if ($context instanceof context_coursecat) {
-            $params['category'] = $context->instanceid;
-        }
-        echo $OUTPUT->single_button(new moodle_url('/course/request.php', $params),
-            get_string('requestcourse'), 'get');
-    }
-    /// Print a button to manage pending requests
-    if (has_capability('moodle/site:approvecourse', $context)) {
-        $disabled = !$DB->record_exists('course_request', array());
-        echo $OUTPUT->single_button(new moodle_url('/course/pending.php'), get_string('coursespending'), 'get', array('disabled' => $disabled));
-    }
-}
-
-/**
  * Does the user have permission to edit things in this category?
  *
  * @param integer $categoryid The id of the category we are showing, or 0 for system context.
@@ -679,74 +649,15 @@ function set_downloadcontent(int $id, bool $downloadcontent): bool {
  * and rebuilt as appropriate. Consider using this if set_coursemodule_visible is called multiple times
  * (e.g. in a loop).
  *
- * @param int $id of the module
+ * @param int $cmid course module id
  * @param int $visible state of the module
  * @param int $visibleoncoursepage state of the module on the course page
  * @param bool $rebuildcache If true (default), perform a partial cache purge and rebuild.
  * @return bool false when the module was not found, true otherwise
  */
-function set_coursemodule_visible($id, $visible, $visibleoncoursepage = 1, bool $rebuildcache = true) {
-    global $DB, $CFG;
-    require_once($CFG->libdir.'/gradelib.php');
-    require_once($CFG->dirroot.'/calendar/lib.php');
-
-    if (!$cm = $DB->get_record('course_modules', array('id'=>$id))) {
-        return false;
-    }
-
-    // Create events and propagate visibility to associated grade items if the value has changed.
-    // Only do this if it's changed to avoid accidently overwriting manual showing/hiding of student grades.
-    if ($cm->visible == $visible && $cm->visibleoncoursepage == $visibleoncoursepage) {
-        return true;
-    }
-
-    if (!$modulename = $DB->get_field('modules', 'name', array('id'=>$cm->module))) {
-        return false;
-    }
-    if (($cm->visible != $visible) &&
-            ($events = $DB->get_records('event', array('instance' => $cm->instance, 'modulename' => $modulename)))) {
-        foreach($events as $event) {
-            if ($visible) {
-                $event = new calendar_event($event);
-                $event->toggle_visibility(true);
-            } else {
-                $event = new calendar_event($event);
-                $event->toggle_visibility(false);
-            }
-        }
-    }
-
-    // Updating visible and visibleold to keep them in sync. Only changing a section visibility will
-    // affect visibleold to allow for an original visibility restore. See set_section_visible().
-    $cminfo = new stdClass();
-    $cminfo->id = $id;
-    $cminfo->visible = $visible;
-    $cminfo->visibleoncoursepage = $visibleoncoursepage;
-    $cminfo->visibleold = $visible;
-    $DB->update_record('course_modules', $cminfo);
-
-    // Hide the associated grade items so the teacher doesn't also have to go to the gradebook and hide them there.
-    // Note that this must be done after updating the row in course_modules, in case
-    // the modules grade_item_update function needs to access $cm->visible.
-    if ($cm->visible != $visible &&
-            plugin_supports('mod', $modulename, FEATURE_CONTROLS_GRADE_VISIBILITY) &&
-            component_callback_exists('mod_' . $modulename, 'grade_item_update')) {
-        $instance = $DB->get_record($modulename, array('id' => $cm->instance), '*', MUST_EXIST);
-        component_callback('mod_' . $modulename, 'grade_item_update', array($instance));
-    } else if ($cm->visible != $visible) {
-        $grade_items = grade_item::fetch_all(array('itemtype'=>'mod', 'itemmodule'=>$modulename, 'iteminstance'=>$cm->instance, 'courseid'=>$cm->course));
-        if ($grade_items) {
-            foreach ($grade_items as $grade_item) {
-                $grade_item->set_hidden(!$visible);
-            }
-        }
-    }
-
-    if ($rebuildcache) {
-        \course_modinfo::purge_course_module_cache($cm->course, $cm->id);
-        rebuild_course_cache($cm->course, false, true);
-    }
-    return true;
+function set_coursemodule_visible($cmid, $visible, $visibleoncoursepage = 1, bool $rebuildcache = true) {
+    $coursecontext = context_module::instance($cmid)->get_course_context();
+    return formatactions::cm($coursecontext->instanceid)->set_visibility($cmid, $visible, $visibleoncoursepage, $rebuildcache);
 }
 
 /**
@@ -1466,7 +1377,7 @@ function course_get_cm_edit_actions(cm_info $mod, $indent = -1, $sr = null) {
     if ($hasmanageactivities) {
         $actions['update'] = new action_menu_link_secondary(
             new moodle_url($baseurl, array('update' => $mod->id)),
-            new pix_icon('t/edit', '', 'moodle', array('class' => 'iconsmall')),
+            new pix_icon('i/settings', '', 'moodle', ['class' => 'iconsmall']),
             $str->editsettings,
             array('class' => 'editing_update', 'data-action' => 'update')
         );
@@ -1589,7 +1500,7 @@ function course_get_cm_edit_actions(cm_info $mod, $indent = -1, $sr = null) {
             $str->groupmode,
             $groupmode->get_choice_list(),
             ['class' => 'editing_groupmode'],
-            new pix_icon('i/groupv', '', 'moodle', ['class' => 'iconsmall'])
+            new pix_icon('t/groupv', '', 'moodle', ['class' => 'iconsmall'])
         );
     }
 
@@ -1688,7 +1599,7 @@ function course_format_name ($course,$max=100) {
  * @param \stdClass $user the user to check, defaults to the global user if not provided.
  * @return bool whether the current user is allowed to add this type of module to this course.
  */
-function course_allowed_module($course, $modname, \stdClass $user = null) {
+function course_allowed_module($course, $modname, ?\stdClass $user = null) {
     global $USER;
     $user = $user ?? $USER;
     if (is_numeric($modname)) {
@@ -2281,7 +2192,7 @@ function update_course($data, $editoroptions = NULL) {
  * @param int $lastloginsince If specified, count only users who logged in after this timestamp.
  * @return float
  */
-function average_number_of_participants(bool $onlyactive = false, int $lastloginsince = null): float {
+function average_number_of_participants(bool $onlyactive = false, ?int $lastloginsince = null): float {
     global $DB;
 
     $params = [];
@@ -2982,7 +2893,12 @@ function include_course_editor(course_format $format) {
  */
 function get_sorted_course_formats($enabledonly = false) {
     global $CFG;
-    $formats = core_component::get_plugin_list('format');
+
+    // Include both formats that exist on disk (but might not have been installed yet), and those
+    // which were installed but no longer exist on disk.
+    $installedformats = core_plugin_manager::instance()->get_installed_plugins('format');
+    $existingformats = core_component::get_plugin_list('format');
+    $formats = array_merge($installedformats, $existingformats);
 
     if (!empty($CFG->format_plugins_sortorder)) {
         $order = explode(',', $CFG->format_plugins_sortorder);
@@ -2996,7 +2912,9 @@ function get_sorted_course_formats($enabledonly = false) {
     }
     $sortedformats = array();
     foreach ($order as $formatname) {
-        if (!get_config('format_'.$formatname, 'disabled')) {
+        $component = "format_{$formatname}";
+        $componentdir = core_component::get_component_directory($component);
+        if ($componentdir !== null && !get_config($component, 'disabled')) {
             $sortedformats[] = $formatname;
         }
     }
@@ -3147,7 +3065,7 @@ function mod_duplicate_activity($course, $cm, $sr = null) {
  *
  * @return cm_info|null cminfo object if we sucessfully duplicated the mod and found the new cm.
  */
-function duplicate_module($course, $cm, int $sectionid = null, bool $changename = true): ?cm_info {
+function duplicate_module($course, $cm, ?int $sectionid = null, bool $changename = true): ?cm_info {
     global $CFG, $DB, $USER;
     require_once($CFG->dirroot . '/backup/util/includes/backup_includes.php');
     require_once($CFG->dirroot . '/backup/util/includes/restore_includes.php');
@@ -3243,6 +3161,23 @@ function duplicate_module($course, $cm, int $sectionid = null, bool $changename 
         // Update calendar events with the duplicated module.
         // The following line is to be removed in MDL-58906.
         course_module_update_calendar_events($newcm->modname, null, $newcm);
+
+        // Copy permission overrides to new course module.
+        $newcmcontext = context_module::instance($newcm->id);
+        $overrides = $DB->get_records('role_capabilities', ['contextid' => $cmcontext->id]);
+        foreach ($overrides as $override) {
+            $override->contextid = $newcmcontext->id;
+            unset($override->id);
+            $DB->insert_record('role_capabilities', $override);
+        }
+
+        // Copy locally assigned roles to new course module.
+        $overrides = $DB->get_records('role_assignments', ['contextid' => $cmcontext->id]);
+        foreach ($overrides as $override) {
+            $override->contextid = $newcmcontext->id;
+            unset($override->id);
+            $DB->insert_record('role_assignments', $override);
+        }
 
         // Trigger course module created event. We can trigger the event only if we know the newcmid.
         $newcm = get_fast_modinfo($cm->course)->get_cm($newcmid);
@@ -4041,8 +3976,8 @@ function course_classify_courses_for_timeline(array $courses) {
 function course_get_enrolled_courses_for_logged_in_user(
     int $limit = 0,
     int $offset = 0,
-    string $sort = null,
-    string $fields = null,
+    ?string $sort = null,
+    ?string $fields = null,
     int $dbquerylimit = COURSE_DB_QUERY_LIMIT,
     array $includecourses = [],
     array $hiddencourses = []
@@ -4087,8 +4022,8 @@ function course_get_enrolled_courses_for_logged_in_user(
 function course_get_enrolled_courses_for_logged_in_user_from_search(
     int $limit = 0,
     int $offset = 0,
-    string $sort = null,
-    string $fields = null,
+    ?string $sort = null,
+    ?string $fields = null,
     int $dbquerylimit = COURSE_DB_QUERY_LIMIT,
     array $searchcriteria = [],
     array $options = []
@@ -4476,7 +4411,7 @@ function course_require_view_participants($context) {
  * @param stdClass $user the user object. If not provided, the current user will be checked.
  * @return bool true if the user is allowed to download in the context, false otherwise.
  */
-function can_download_from_backup_filearea($filearea, \context $context, stdClass $user = null) {
+function can_download_from_backup_filearea($filearea, \context $context, ?stdClass $user = null) {
     $candownload = false;
     switch ($filearea) {
         case 'course':
@@ -4532,7 +4467,7 @@ function get_hidden_courses_on_timeline($user = null) {
  * @param string|null $sort SQL string for sorting
  * @return array
  */
-function course_get_recent_courses(int $userid = null, int $limit = 0, int $offset = 0, string $sort = null) {
+function course_get_recent_courses(?int $userid = null, int $limit = 0, int $offset = 0, ?string $sort = null) {
 
     global $CFG, $USER, $DB;
 
@@ -4866,6 +4801,12 @@ function course_get_communication_instance_data(int $courseid): array {
  */
 function course_update_communication_instance_data(stdClass $data): void {
     $data->id = $data->instanceid; // For correct use in update_course.
+    // If the room name is set to empty, then set it course name.
+    $provider = $data->selectedcommunication ?? null;
+    $roomnameidentifier = $provider . 'roomname';
+    if ($provider && empty($data->$roomnameidentifier)) {
+        $data->$roomnameidentifier = $data->fullname ?? get_course($data->id)->fullname;
+    }
     core_communication\helper::update_course_communication_instance(
         course: $data,
         changesincoursecat: false,

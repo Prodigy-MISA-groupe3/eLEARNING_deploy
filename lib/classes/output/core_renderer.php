@@ -18,6 +18,7 @@ namespace core\output;
 
 use breadcrumb_navigation_node;
 use cm_info;
+use core\hook\output\after_http_headers;
 use core_block\output\block_contents;
 use core_block\output\block_move_target;
 use core_completion\cm_completion_details;
@@ -39,13 +40,9 @@ use core\hook\output\before_html_attributes;
 use core\hook\output\before_http_headers;
 use core\hook\output\before_standard_footer_html_generation;
 use core\hook\output\before_standard_top_of_body_html_generation;
-use core\output\action_menu\link as action_menu_link;
-use core\output\action_menu\link_primary as action_menu_link_primary;
 use core\output\actions\component_action;
 use core\output\actions\popup_action;
-use core\output\action_menu\filler as action_menu_filler;
 use core\plugin_manager;
-use core\output\action_menu\link_secondary as action_menu_link_secondary;
 use moodleform;
 use moodle_page;
 use moodle_url;
@@ -275,7 +272,9 @@ class core_renderer extends renderer_base {
             if (!isset($CFG->additionalhtmlhead)) {
                 $CFG->additionalhtmlhead = '';
             }
-            $CFG->additionalhtmlhead .= '<meta name="robots" content="noindex" />';
+            if (stripos($CFG->additionalhtmlhead, '<meta name="robots" content="noindex" />') === false) {
+                $CFG->additionalhtmlhead .= '<meta name="robots" content="noindex" />';
+            }
         }
 
         if (!empty($CFG->additionalhtmlhead)) {
@@ -440,7 +439,7 @@ class core_renderer extends renderer_base {
                 html_writer::link($nuurl, get_string('validatehtml')),
                 html_writer::link($waveurl, get_string('wcagcheck')),
             ];
-            $validatorlinkslist = html_writer::alist($validatorlinks, ['class' => 'list-unstyled ml-1']);
+            $validatorlinkslist = html_writer::alist($validatorlinks, ['class' => 'list-unstyled ms-1']);
             $output .= html_writer::div($validatorlinkslist, 'validators');
         }
         return $output;
@@ -937,7 +936,14 @@ class core_renderer extends renderer_base {
         if (!$this->page->cm || !empty($this->page->layout_options['noactivityheader'])) {
             $header .= $this->skip_link_target('maincontent');
         }
-        return $header;
+
+        $hook = new after_http_headers(
+            renderer: $this,
+            output: $header,
+        );
+        di::get(hook_manager::class)->dispatch($hook);
+
+        return $hook->get_output();
     }
 
     /**
@@ -1296,7 +1302,7 @@ class core_renderer extends renderer_base {
 
         // We don't want the class icon there!
         foreach ($menu->get_secondary_actions() as $action) {
-            if ($action instanceof \action_menu_link && $action->has_class('icon')) {
+            if ($action instanceof action_menu\link && $action->has_class('icon')) {
                 $action->attributes['class'] = preg_replace('/(^|\s+)icon(\s+|$)/i', '', $action->attributes['class']);
             }
         }
@@ -1383,43 +1389,95 @@ class core_renderer extends renderer_base {
     }
 
     /**
-     * Renders an action_menu_link item.
+     * @deprecated Since Moodle 4.5. Will be removed in MDL-83221
+     */
+    #[\core\attribute\deprecated(
+        replacement: 'render_action_menu__link',
+        since: '4.5',
+        mdl: 'MDL-83164',
+    )]
+    protected function render_action_menu_link(\action_menu_link $action) {
+        \core\deprecation::emit_deprecation_if_present([$this, __FUNCTION__]);
+        return $this->render_action_menu__link($action);
+    }
+
+    /**
+     * @deprecated Since Moodle 4.5. Will be removed in MDL-83221
+     */
+    #[\core\attribute\deprecated(
+        replacement: 'render_action_menu__filler',
+        since: '4.5',
+        mdl: 'MDL-83164',
+    )]
+    protected function render_action_menu_filler(\action_menu_filler $action) {
+        \core\deprecation::emit_deprecation_if_present([$this, __FUNCTION__]);
+        return $this->render_action_menu__filler($action);
+    }
+
+    /**
+     * @deprecated Since Moodle 4.5. Will be removed in MDL-83221
+     */
+    #[\core\attribute\deprecated(
+        replacement: 'render_action_menu__link_primary',
+        since: '4.5',
+        mdl: 'MDL-83164',
+    )]
+    protected function render_action_menu_primary(\action_menu_link $action) {
+        \core\deprecation::emit_deprecation_if_present([$this, __FUNCTION__]);
+        return $this->render_action_menu__link_primary($action);
+    }
+
+    /**
+     * @deprecated Since Moodle 4.5. Will be removed in MDL-83221
+     */
+    #[\core\attribute\deprecated(
+        replacement: 'render_action_menu__link_secondary',
+        since: '4.5',
+        mdl: 'MDL-83164',
+    )]
+    protected function render_action_menu_secondary(\action_menu_link $action) {
+        \core\deprecation::emit_deprecation_if_present([$this, __FUNCTION__]);
+        return $this->render_action_menu__link_secondary($action);
+    }
+
+    /**
+     * Renders an action_menu link item.
      *
-     * @param action_menu_link $action
+     * @param action_menu\link $action
      * @return string HTML fragment
      */
-    protected function render_action_menu_link(action_menu_link $action) {
+    protected function render_action_menu__link(action_menu\link $action) {
         return $this->render_from_template('core/action_menu_link', $action->export_for_template($this));
     }
 
     /**
-     * Renders a primary action_menu_filler item.
+     * Renders a primary action_menu filler item.
      *
-     * @param action_menu_filler $action
+     * @param action_menu\filler $action
      * @return string HTML fragment
      */
-    protected function render_action_menu_filler(action_menu_filler $action) {
+    protected function render_action_menu__filler(action_menu\filler $action) {
         return html_writer::span('&nbsp;', 'filler');
     }
 
     /**
-     * Renders a primary action_menu_link item.
+     * Renders a primary action_menu link item.
      *
-     * @param action_menu_link_primary $action
+     * @param action_menu\link_primary $action
      * @return string HTML fragment
      */
-    protected function render_action_menu_link_primary(action_menu_link_primary $action) {
-        return $this->render_action_menu_link($action);
+    protected function render_action_menu__link_primary(action_menu\link_primary $action) {
+        return $this->render_action_menu__link($action);
     }
 
     /**
-     * Renders a secondary action_menu_link item.
+     * Renders a secondary action_menu link item.
      *
-     * @param action_menu_link_secondary $action
+     * @param action_menu\link_secondary $action
      * @return string HTML fragment
      */
-    protected function render_action_menu_link_secondary(action_menu_link_secondary $action) {
-        return $this->render_action_menu_link($action);
+    protected function render_action_menu__link_secondary(action_menu\link_secondary $action) {
+        return $this->render_action_menu__link($action);
     }
 
     /**
@@ -2635,9 +2693,12 @@ EOD;
      * @param string $message The message to print out.
      * @param ?string $type   The type of notification. See constants on notification.
      * @param bool $closebutton Whether to show a close icon to remove the notification (default true).
+     * @param ?string $title  The title of the notification.
+     * @param ?string $titleicon if the title should have an icon you can give the icon name with the component
+     *  (e.g. 'i/circleinfo, core' or 'i/circleinfo' if the icon is from core)
      * @return string the HTML to output.
      */
-    public function notification($message, $type = null, $closebutton = true) {
+    public function notification($message, $type = null, $closebutton = true, ?string $title = null, ?string $titleicon = null) {
         $typemappings = [
             // Valid types.
             'success'           => notification::NOTIFY_SUCCESS,
@@ -2681,7 +2742,7 @@ EOD;
             }
         }
 
-        $notification = new notification($message, $type, $closebutton);
+        $notification = new notification($message, $type, $closebutton, $title, $titleicon);
         if (count($extraclasses)) {
             $notification->set_extra_classes($extraclasses);
         }
@@ -3161,13 +3222,13 @@ EOD;
         }
 
         $returnstr .= html_writer::span(
-            html_writer::span($usertextcontents, 'usertext mr-1') .
+            html_writer::span($usertextcontents, 'usertext me-1') .
             html_writer::span($avatarcontents, $avatarclasses),
             'userbutton'
         );
 
         // Create a divider (well, a filler).
-        $divider = new action_menu_filler();
+        $divider = new action_menu\filler();
         $divider->primary = false;
 
         $am = new action_menu();
@@ -3204,7 +3265,7 @@ EOD;
                             ) . $value->title;
                         }
 
-                        $al = new action_menu_link_secondary(
+                        $al = new action_menu\link_secondary(
                             $value->url,
                             $pix,
                             $value->title,
@@ -3425,6 +3486,14 @@ EOD;
         if (empty($custommenuitems) && !empty($CFG->custommenuitems)) {
             $custommenuitems = $CFG->custommenuitems;
         }
+
+        // If filtering of the primary custom menu is enabled, apply only the string filters.
+        if (!empty($CFG->navfilter && !empty($CFG->stringfilters))) {
+            // Apply filters that are enabled for Content and Headings.
+            $filtermanager = \filter_manager::instance();
+            $custommenuitems = $filtermanager->filter_string($custommenuitems, \context_system::instance());
+        }
+
         $custommenu = new custom_menu($custommenuitems, current_language());
         return $this->render_custom_menu($custommenu);
     }
@@ -3440,6 +3509,14 @@ EOD;
         if (empty($custommenuitems) && !empty($CFG->custommenuitems)) {
             $custommenuitems = $CFG->custommenuitems;
         }
+
+        // If filtering of the primary custom menu is enabled, apply only the string filters.
+        if (!empty($CFG->navfilter && !empty($CFG->stringfilters))) {
+            // Apply filters that are enabled for Content and Headings.
+            $filtermanager = \filter_manager::instance();
+            $custommenuitems = $filtermanager->filter_string($custommenuitems, \context_system::instance());
+        }
+
         $custommenu = new custom_menu($custommenuitems, current_language());
         $langs = get_string_manager()->get_list_of_translations();
         $haslangmenu = $this->lang_menu() != '';
@@ -3869,7 +3946,7 @@ EOD;
 
         if (!empty($CFG->supportpage)) {
             $attributes = ['href' => $CFG->supportpage, 'target' => 'blank'];
-            $content .= $this->pix_icon('i/externallink', '', 'moodle', ['class' => 'ml-1']);
+            $content .= $this->pix_icon('i/externallink', '', 'moodle', ['class' => 'ms-1']);
         } else {
             $attributes = ['href' => $CFG->wwwroot . '/user/contactsitesupport.php'];
         }
@@ -3896,7 +3973,7 @@ EOD;
         }
 
         $liferingicon = $this->pix_icon('t/life-ring', '', 'moodle', ['class' => 'fa fa-life-ring']);
-        $newwindowicon = $this->pix_icon('i/externallink', get_string('opensinnewwindow'), 'moodle', ['class' => 'ml-1']);
+        $newwindowicon = $this->pix_icon('i/externallink', get_string('opensinnewwindow'), 'moodle', ['class' => 'ms-1']);
         $link = !empty($CFG->servicespage)
             ? $CFG->servicespage
             : 'https://moodle.com/help/?utm_source=CTA-banner&utm_medium=platform&utm_campaign=name~Moodle4+cat~lms+mp~no';
@@ -3934,7 +4011,7 @@ EOD;
     public function communication_link(): string {
         $link = $this->communication_url() ?? '';
         $commicon = $this->pix_icon('t/messages-o', '', 'moodle', ['class' => 'fa fa-comments']);
-        $newwindowicon = $this->pix_icon('i/externallink', get_string('opensinnewwindow'), 'moodle', ['class' => 'ml-1']);
+        $newwindowicon = $this->pix_icon('i/externallink', get_string('opensinnewwindow'), 'moodle', ['class' => 'ms-1']);
         $content = $commicon . get_string('communicationroomlink', 'course') . $newwindowicon;
         $html = html_writer::tag('a', $content, ['target' => '_blank', 'href' => $link]);
 
@@ -4080,7 +4157,7 @@ EOD;
                             'buttontype' => 'message',
                             'title' => get_string('message', 'message'),
                             'url' => new moodle_url('/message/index.php', ['id' => $user->id]),
-                            'image' => 'message',
+                            'image' => 't/message',
                             'linkattributes' => \core_message\helper::messageuser_link_params($user->id),
                             'page' => $this->page,
                         ],
@@ -4117,12 +4194,12 @@ EOD;
                                 $contacttitle = 'addtoyourcontacts';
                                 $contacturlaction = 'addcontact';
                             }
-                            $contactimage = 'addcontact';
+                            $contactimage = 't/addcontact';
                         } else {
                             // If the user is a contact.
                             $contacttitle = 'removefromyourcontacts';
                             $contacturlaction = 'removecontact';
-                            $contactimage = 'removecontact';
+                            $contactimage = 't/removecontact';
                         }
                         $userbuttons['togglecontact'] = [
                                 'buttontype' => 'togglecontact',
@@ -4375,7 +4452,7 @@ EOD;
                     $link = new action_link(new moodle_url('#'), $menuitem->text, null, ['disabled' => true], $menuitem->icon);
                 }
                 if ($indent) {
-                    $link->add_class('ml-4');
+                    $link->add_class('ms-4');
                 }
                 if (!empty($menuitem->classes)) {
                     $link->add_class(implode(" ", $menuitem->classes));
@@ -4697,15 +4774,12 @@ EOD;
      * @param  float $percent
      * @param  string $msg Message
      * @param  string $estimate time remaining message
+     * @param  bool $error Was there an error?
      * @return string ascii fragment
      */
-    public function render_progress_bar_update(string $id, float $percent, string $msg, string $estimate): string {
-        return html_writer::script(js_writer::function_call('updateProgressBar', [
-            $id,
-            round($percent, 1),
-            $msg,
-            $estimate,
-        ]));
+    public function render_progress_bar_update(string $id, float $percent, string $msg, string $estimate,
+        bool $error = false): string {
+        return html_writer::script(js_writer::function_call('updateProgressBar', [$id, $percent, $msg, $estimate, $error]));
     }
 
     /**

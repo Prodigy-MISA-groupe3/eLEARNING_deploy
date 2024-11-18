@@ -196,6 +196,9 @@ if (!isset($CFG->wwwroot) or $CFG->wwwroot === 'http://example.com/moodle') {
     exit(1);
 }
 
+// The router configuration is mandatory.
+$CFG->routerconfigured = !empty($CFG->routerconfigured);
+
 // Make sure there is some database table prefix.
 if (!isset($CFG->prefix)) {
     $CFG->prefix = '';
@@ -256,7 +259,7 @@ if (!isset($_SERVER['REMOTE_ADDR']) && isset($_SERVER['argv'][0])) {
 
 // sometimes default PHP settings are borked on shared hosting servers, I wonder why they have to do that??
 ini_set('precision', 14); // needed for upgrades and gradebook
-ini_set('serialize_precision', 17); // Make float serialization consistent on all systems.
+ini_set('serialize_precision', -1); // Make float serialization consistent on all systems.
 
 // Scripts may request no debug and error messages in output
 // please note it must be defined before including the config.php script
@@ -310,7 +313,7 @@ if (!defined('CACHE_DISABLE_ALL')) {
 }
 
 // When set to true MUC (Moodle caching) will not use any of the defined or default stores.
-// The Cache API will continue to function however this will force the use of the cachestore_dummy so all requests
+// The Cache API will continue to function however this will force the use of the dummy_cachestore so all requests
 // will be interacting with a static property and will never go to the proper cache stores.
 // Useful if you need to avoid the stores for one reason or another.
 if (!defined('CACHE_DISABLE_STORES')) {
@@ -436,12 +439,6 @@ if (!defined('MOODLE_INTERNAL')) { // Necessary because cli installer has to def
 
 // The core_component class can be used in any scripts, it does not need anything else.
 require_once($CFG->libdir .'/classes/component.php');
-
-// Early profiling start, based exclusively on config.php $CFG settings
-if (!empty($CFG->earlyprofilingenabled) && !defined('ABORT_AFTER_CONFIG_CANCEL')) {
-    require_once($CFG->libdir . '/xhprof/xhprof_moodle.php');
-    profiling_start();
-}
 
 /**
  * Database connection. Used for all access to the database.
@@ -591,11 +588,13 @@ if (NO_OUTPUT_BUFFERING) {
 // the problem is that we need specific version of quickforms and hacked excel files :-(.
 ini_set('include_path', $CFG->libdir . '/pear' . PATH_SEPARATOR . ini_get('include_path'));
 
-// Register our classloader, in theory somebody might want to replace it to load other hacked core classes.
-if (defined('COMPONENT_CLASSLOADER')) {
-    spl_autoload_register(COMPONENT_CLASSLOADER);
-} else {
-    spl_autoload_register([\core_component::class, 'classloader']);
+// Register our classloader.
+\core\component::register_autoloader();
+
+// Early profiling start, based exclusively on config.php $CFG settings
+if (!empty($CFG->earlyprofilingenabled) && !defined('ABORT_AFTER_CONFIG_CANCEL')) {
+    require_once($CFG->libdir . '/xhprof/xhprof_moodle.php');
+    profiling_start();
 }
 
 // Special support for highly optimised scripts that do not need libraries and DB connection.
@@ -639,7 +638,6 @@ require_once($CFG->libdir .'/sessionlib.php');      // All session and cookie re
 require_once($CFG->libdir .'/editorlib.php');       // All text editor related functions and classes.
 require_once($CFG->libdir .'/messagelib.php');      // Messagelib functions.
 require_once($CFG->libdir .'/modinfolib.php');      // Cached information on course-module instances.
-require_once($CFG->dirroot.'/cache/lib.php');       // Cache API.
 
 // Increase memory limits if possible.
 raise_memory_limit(MEMORY_STANDARD);
@@ -711,19 +709,29 @@ if (PHPUNIT_TEST and !PHPUNIT_UTIL) {
 }
 
 // Load any immutable bootstrap config from local cache.
-$bootstrapcachefile = $CFG->localcachedir . '/bootstrap.php';
-if (is_readable($bootstrapcachefile)) {
+$bootstraplocalfile = $CFG->localcachedir . '/bootstrap.php';
+$bootstrapsharedfile = $CFG->cachedir . '/bootstrap.php';
+
+if (!is_readable($bootstraplocalfile) && is_readable($bootstrapsharedfile)) {
+    // If we don't have a local cache but do have a shared cache then clone it,
+    // for example when scaling up new front ends.
+    make_localcache_directory('', true);
+    copy($bootstrapsharedfile, $bootstraplocalfile);
+}
+if (is_readable($bootstraplocalfile)) {
     try {
-        require_once($bootstrapcachefile);
+        require_once($bootstraplocalfile);
         // Verify the file is not stale.
         if (!isset($CFG->bootstraphash) || $CFG->bootstraphash !== hash_local_config_cache()) {
             // Something has changed, the bootstrap.php file is stale.
             unset($CFG->siteidentifier);
-            @unlink($bootstrapcachefile);
+            @unlink($bootstraplocalfile);
+            @unlink($bootstrapsharedfile);
         }
     } catch (Throwable $e) {
         // If it is corrupted then attempt to delete it and it will be rebuilt.
-        @unlink($bootstrapcachefile);
+        @unlink($bootstraplocalfile);
+        @unlink($bootstrapsharedfile);
     }
 }
 
@@ -1212,13 +1220,6 @@ if (false) {
 initialise_local_config_cache();
 
 // Allow plugins to callback as soon possible after setup.php is loaded.
-$pluginswithfunction = get_plugins_with_function('after_config', 'lib.php');
-foreach ($pluginswithfunction as $plugins) {
-    foreach ($plugins as $function) {
-        try {
-            $function();
-        } catch (Throwable $e) {
-            debugging("Exception calling '$function'", DEBUG_DEVELOPER, $e->getTrace());
-        }
-    }
-}
+$afterconfighook = new \core\hook\after_config();
+$afterconfighook->process_legacy_callbacks();
+\core\di::get(\core\hook\manager::class)->dispatch($afterconfighook);

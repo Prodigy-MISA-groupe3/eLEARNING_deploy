@@ -933,7 +933,7 @@ class api {
      * @param array $hasanycapability Array of capabilities passed to {@link has_any_capability()} in each context.
      * @return context[] An array of contexts where keys are context IDs.
      */
-    public static function get_related_contexts($context, $includes, array $hasanycapability = null) {
+    public static function get_related_contexts($context, $includes, ?array $hasanycapability = null) {
         global $DB;
         static::require_enabled();
 
@@ -4620,7 +4620,7 @@ class api {
      * @return void
      */
     protected static function apply_competency_rules_from_usercompetency(user_competency $usercompetency,
-                                                                         competency $competency = null, $overridegrade = false) {
+                                                                         ?competency $competency = null, $overridegrade = false) {
 
         // Perform some basic checks.
         if (!$usercompetency->get('proficiency')) {

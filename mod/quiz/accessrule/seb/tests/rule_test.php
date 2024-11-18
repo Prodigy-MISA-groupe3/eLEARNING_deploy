@@ -371,12 +371,35 @@ class rule_test extends \advanced_testcase {
 
         // Set up dummy request.
         $FULLME = 'https://example.com/moodle/mod/quiz/attempt.php?attemptid=123&page=4';
+        $_SERVER['HTTP_USER_AGENT'] = 'SEB';
         $_SERVER['HTTP_X_SAFEEXAMBROWSER_CONFIGKEYHASH'] = 'Broken config key';
 
         $user = $this->getDataGenerator()->create_user();
         $this->setUser($user);
 
         $this->check_invalid_config_key();
+    }
+
+    /**
+     * Test access prevented if config key is invalid when not using the Safe Exam Browser.
+     */
+    public function test_access_prevented_if_config_key_invalid_not_using_seb(): void {
+        global $FULLME;
+
+        $this->setAdminUser();
+        $this->quiz = $this->create_test_quiz($this->course, settings_provider::USE_SEB_CONFIG_MANUALLY);
+
+        // Set up dummy request.
+        $FULLME = 'https://example.com/moodle/mod/quiz/attempt.php?attemptid=123&page=4';
+        $_SERVER['HTTP_X_SAFEEXAMBROWSER_CONFIGKEYHASH'] = 'Broken config key';
+
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+
+        $errormsg = $this->make_rule()->prevent_access();
+        $this->assertNotEmpty($errormsg);
+        $this->assertStringNotContainsString("The Safe Exam Browser keys could not be validated. "
+            . "Check that you're using Safe Exam Browser with the correct configuration file.", $errormsg);
     }
 
     /**
@@ -391,12 +414,13 @@ class rule_test extends \advanced_testcase {
         // Set quiz setting to require seb and save BEK.
         $quizsettings = seb_quiz_settings::get_record(['quizid' => $this->quiz->id]);
         $quizsettings->set('requiresafeexambrowser', settings_provider::USE_SEB_UPLOAD_CONFIG);
-        $xml = file_get_contents(__DIR__ . '/fixtures/unencrypted.seb');
+        $xml = file_get_contents(self::get_fixture_path(__NAMESPACE__, 'unencrypted.seb'));
         $this->create_module_test_file($xml, $this->quiz->cmid);
         $quizsettings->save();
 
         // Set up dummy request.
         $FULLME = 'https://example.com/moodle/mod/quiz/attempt.php?attemptid=123&page=4';
+        $_SERVER['HTTP_USER_AGENT'] = 'SEB';
         $_SERVER['HTTP_X_SAFEEXAMBROWSER_CONFIGKEYHASH'] = 'Broken config key';
 
         $user = $this->getDataGenerator()->create_user();
@@ -422,6 +446,7 @@ class rule_test extends \advanced_testcase {
 
         // Set up dummy request.
         $FULLME = 'https://example.com/moodle/mod/quiz/attempt.php?attemptid=123&page=4';
+        $_SERVER['HTTP_USER_AGENT'] = 'SEB';
         $_SERVER['HTTP_X_SAFEEXAMBROWSER_CONFIGKEYHASH'] = 'Broken config key';
 
         $user = $this->getDataGenerator()->create_user();
@@ -493,7 +518,7 @@ class rule_test extends \advanced_testcase {
         // Set quiz setting to require seb and save BEK.
         $quizsettings = seb_quiz_settings::get_record(['quizid' => $this->quiz->id]);
         $quizsettings->set('requiresafeexambrowser', settings_provider::USE_SEB_UPLOAD_CONFIG);
-        $xml = file_get_contents(__DIR__ . '/fixtures/unencrypted.seb');
+        $xml = file_get_contents(self::get_fixture_path(__NAMESPACE__, 'unencrypted.seb'));
         $this->create_module_test_file($xml, $this->quiz->cmid);
         $quizsettings->save();
 
@@ -552,7 +577,7 @@ class rule_test extends \advanced_testcase {
         $quizsettings = seb_quiz_settings::get_record(['quizid' => $this->quiz->id]);
         $quizsettings->set('requiresafeexambrowser', settings_provider::USE_SEB_UPLOAD_CONFIG);
         $quizsettings->set('allowedbrowserexamkeys', $browserexamkey);
-        $xml = file_get_contents(__DIR__ . '/fixtures/unencrypted.seb');
+        $xml = file_get_contents(self::get_fixture_path(__NAMESPACE__, 'unencrypted.seb'));
         $this->create_module_test_file($xml, $this->quiz->cmid);
         $quizsettings->save();
 
@@ -670,13 +695,14 @@ class rule_test extends \advanced_testcase {
         $quizsettings = seb_quiz_settings::get_record(['quizid' => $this->quiz->id]);
         $quizsettings->set('requiresafeexambrowser', settings_provider::USE_SEB_UPLOAD_CONFIG);
         $quizsettings->set('allowedbrowserexamkeys', $browserexamkey);
-        $xml = file_get_contents(__DIR__ . '/fixtures/unencrypted.seb');
+        $xml = file_get_contents(self::get_fixture_path(__NAMESPACE__, 'unencrypted.seb'));
         $this->create_module_test_file($xml, $this->quiz->cmid);
         $quizsettings->save();
 
         // Set up dummy request.
         $FULLME = 'https://example.com/moodle/mod/quiz/attempt.php?attemptid=123&page=4';
         $expectedhash = hash('sha256', $FULLME . $quizsettings->get_config_key());
+        $_SERVER['HTTP_USER_AGENT'] = 'SEB';
         $_SERVER['HTTP_X_SAFEEXAMBROWSER_CONFIGKEYHASH'] = $expectedhash;
 
         // Set  up broken browser key.
@@ -798,7 +824,7 @@ class rule_test extends \advanced_testcase {
         // Set quiz setting to require seb.
         $quizsettings = seb_quiz_settings::get_record(['quizid' => $this->quiz->id]);
         $quizsettings->set('requiresafeexambrowser', settings_provider::USE_SEB_UPLOAD_CONFIG); // Doesn't check basic header.
-        $xml = file_get_contents(__DIR__ . '/fixtures/unencrypted.seb');
+        $xml = file_get_contents(self::get_fixture_path(__NAMESPACE__, 'unencrypted.seb'));
         $this->create_module_test_file($xml, $this->quiz->cmid);
         $quizsettings->save();
 
@@ -1057,7 +1083,7 @@ class rule_test extends \advanced_testcase {
 
         // Should see links when using uploaded config.
         $quizsettings->set('requiresafeexambrowser', settings_provider::USE_SEB_UPLOAD_CONFIG);
-        $xml = file_get_contents(__DIR__ . '/fixtures/unencrypted.seb');
+        $xml = file_get_contents(self::get_fixture_path(__NAMESPACE__, 'unencrypted.seb'));
         $this->create_module_test_file($xml, $this->quiz->cmid);
         $quizsettings->save();
         $this->assertStringContainsString($this->get_seb_launch_link(), $method->invoke($this->make_rule()));

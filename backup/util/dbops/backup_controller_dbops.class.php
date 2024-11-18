@@ -364,7 +364,7 @@ abstract class backup_controller_dbops extends backup_dbops {
      * @param \core\progress\base $progress Optional progress monitor
      */
     public static function get_moodle_backup_information($backupid,
-            \core\progress\base $progress = null) {
+            ?\core\progress\base $progress = null) {
 
         // Start tracking progress if required (for load_controller).
         if ($progress) {
@@ -561,6 +561,7 @@ abstract class backup_controller_dbops extends backup_dbops {
                         'backup_general_role_assignments'   => 'role_assignments',
                         'backup_general_activities'         => 'activities',
                         'backup_general_blocks'             => 'blocks',
+                        'backup_general_files'              => 'files',
                         'backup_general_filters'            => 'filters',
                         'backup_general_comments'           => 'comments',
                         'backup_general_badges'             => 'badges',
@@ -611,6 +612,7 @@ abstract class backup_controller_dbops extends backup_dbops {
                         'backup_auto_role_assignments'   => 'role_assignments',
                         'backup_auto_activities'         => 'activities',
                         'backup_auto_blocks'             => 'blocks',
+                        'backup_auto_files'              => 'files',
                         'backup_auto_filters'            => 'filters',
                         'backup_auto_comments'           => 'comments',
                         'backup_auto_badges'             => 'badges',

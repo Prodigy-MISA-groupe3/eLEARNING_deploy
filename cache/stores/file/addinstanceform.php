@@ -15,20 +15,6 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * The library file for the file cache store.
- *
- * This file is part of the file cache store, it contains the API for interacting with an instance of the store.
- * This is used as a default cache store within the Cache API. It should never be deleted.
- *
- * @package    cachestore_file
- * @category   cache
- * @copyright  2012 Sam Hemelryk
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
-require_once($CFG->dirroot.'/cache/forms.php');
-
-/**
  * Form for adding a file instance.
  *
  * @copyright  2012 Sam Hemelryk
@@ -67,5 +53,11 @@ class cachestore_file_addinstance_form extends cachestore_addinstance_form {
         $form->setDefault('lockwait', 60);
         $form->setType('lockwait', PARAM_INT);
         $form->addHelpButton('lockwait', 'lockwait', 'cachestore_file');
+
+        $serializeroptions = cachestore_file::config_get_serializer_options();
+        $form->addElement('select', 'serializer', get_string('useserializer', 'cachestore_file'), $serializeroptions);
+        $form->setDefault('serializer', cachestore_file::SERIALIZER_PHP);
+        $form->setType('serializer', PARAM_ALPHA);
+        $form->addHelpButton('serializer', 'useserializer', 'cachestore_file');
     }
 }

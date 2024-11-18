@@ -452,6 +452,11 @@ class framework implements H5PFrameworkInterface {
             'width' => 'width',
             'height' => 'height',
             'Missing main library @library' => 'missingmainlibrary',
+            'Rotate Left' => 'rotateLeft',
+            'Rotate Right' => 'rotateRight',
+            'Crop Image' => 'cropImage',
+            'Confirm Crop' => 'confirmCrop',
+            'Cancel Crop' => 'cancelCrop',
         ];
 
         if (isset($translationsmap[$message])) {
@@ -1757,7 +1762,7 @@ class framework implements H5PFrameworkInterface {
      * @param string $newmessage The message
      * @param string $code The message code
      */
-    private function set_message(string $type, string $newmessage = null, string $code = null) {
+    private function set_message(string $type, ?string $newmessage = null, ?string $code = null) {
         global $SESSION;
 
         // We expect to get out an array of strings when getting info

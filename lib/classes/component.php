@@ -22,6 +22,16 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace core;
+
+use core\exception\coding_exception;
+use core\output\theme_config;
+use stdClass;
+use ArrayIterator;
+use DirectoryIterator;
+use Exception;
+use RegexIterator;
+
 // Constants used in version.php files, these must exist when core_component executes.
 
 // We make use of error_log as debugging is not always available.
@@ -43,7 +53,7 @@ define('ANY_VERSION', 'any');
 /**
  * Collection of components related methods.
  */
-class core_component {
+class component {
     /** @var array list of ignored directories in plugin type roots - watch out for auth/db exception */
     protected static $ignoreddirs = [
         'CVS' => true,
@@ -89,45 +99,103 @@ class core_component {
     /** @var array associative array of PSR-0 namespaces and corresponding paths. */
     protected static $psr0namespaces = [
         'Mustache' => 'lib/mustache/src/Mustache',
-        'CFPropertyList' => 'lib/plist/classes/CFPropertyList',
     ];
     /** @var array<string|array<string>> associative array of PRS-4 namespaces and corresponding paths. */
     protected static $psr4namespaces = [
-        'MaxMind' => 'lib/maxmind/MaxMind',
-        'GeoIp2' => 'lib/maxmind/GeoIp2',
-        'Sabberworm\\CSS' => 'lib/php-css-parser',
-        'MoodleHQ\\RTLCSS' => 'lib/rtlcss',
-        'ScssPhp\\ScssPhp' => 'lib/scssphp',
-        'OpenSpout' => 'lib/openspout/src',
-        'MatthiasMullie\\Minify' => 'lib/minify/matthiasmullie-minify/src/',
-        'MatthiasMullie\\PathConverter' => 'lib/minify/matthiasmullie-pathconverter/src/',
-        'IMSGlobal\LTI' => 'lib/ltiprovider/src',
-        'Packback\\Lti1p3' => 'lib/lti1p3/src',
-        'Phpml' => 'lib/mlbackend/php/phpml/src/Phpml',
-        'PHPMailer\\PHPMailer' => 'lib/phpmailer/src',
-        'RedeyeVentures\\GeoPattern' => 'lib/geopattern-php/GeoPattern',
-        'Firebase\\JWT' => 'lib/php-jwt/src',
-        'ZipStream' => 'lib/zipstream/src/',
-        'MyCLabs\\Enum' => 'lib/php-enum/src',
-        'PhpXmlRpc' => 'lib/phpxmlrpc',
-        'Psr\\Http\\Client' => 'lib/psr/http-client/src',
-        'Psr\\Http\\Message' => [
-            'lib/psr/http-message/src',
-            'lib/psr/http-factory/src',
+        \Aws::class => 'lib/aws-sdk/src',
+        \CFPropertyList::class => 'lib/plist/src/CFPropertyList',
+        \Complex::class => 'lib/phpspreadsheet/markbaker/classes/src',
+        \DI::class => 'lib/php-di/php-di/src',
+        \GeoIp2::class => 'lib/maxmind/GeoIp2/src',
+        \FastRoute::class => 'lib/nikic/fast-route/src',
+        \Firebase\JWT::class => 'lib/php-jwt/src',
+        \GuzzleHttp::class => 'lib/guzzlehttp/guzzle/src',
+        \GuzzleHttp\Promise::class => 'lib/guzzlehttp/promises/src',
+        \GuzzleHttp\Psr7::class => 'lib/guzzlehttp/psr7/src',
+        \Html2Text::class => 'lib/html2text/src',
+        \IMSGlobal\LTI::class => 'lib/ltiprovider/src',
+        \Invoker::class => 'lib/php-di/invoker/src',
+        \JmesPath::class => 'lib/jmespath/src',
+        \Kevinrob\GuzzleCache::class => 'lib/guzzlehttp/kevinrob/guzzlecache/src',
+        \Laravel\SerializableClosure::class => 'lib/laravel/serializable-closure/src',
+        \lbuchs\WebAuthn::class => 'lib/webauthn/src',
+        \libphonenumber::class => 'lib/giggsey/libphonenumber-for-php-lite/src',
+        \Matrix::class => 'lib/phpspreadsheet/markbaker/classes/src',
+        \MatthiasMullie\Minify::class => 'lib/minify/matthiasmullie-minify/src',
+        \MatthiasMullie\PathConverter::class => 'lib/minify/matthiasmullie-pathconverter/src',
+        \MaxMind\Db::class => 'lib/maxmind/MaxMind/src/MaxMind/Db',
+        \Michelf::class => 'lib/markdown/Michelf',
+        \MoodleHQ::class => [
+            'lib/rtlcss/src/MoodleHQ',
         ],
-        'Psr\\EventDispatcher' => 'lib/psr/event-dispatcher/src',
-        'Psr\\Clock' => 'lib/psr/clock/src',
-        'Psr\\Container' => 'lib/psr/container/src',
-        'GuzzleHttp\\Psr7' => 'lib/guzzlehttp/psr7/src',
-        'GuzzleHttp\\Promise' => 'lib/guzzlehttp/promises/src',
-        'GuzzleHttp' => 'lib/guzzlehttp/guzzle/src',
-        'Kevinrob\\GuzzleCache' => 'lib/guzzlehttp/kevinrob/guzzlecache/src',
-        'Aws' => 'lib/aws-sdk/src',
-        'JmesPath' => 'lib/jmespath/src',
-        'Laravel\\SerializableClosure' => 'lib/laravel/serializable-closure/src',
-        'DI' => 'lib/php-di/php-di/src',
-        'Invoker' => 'lib/php-di/invoker/src',
+        \MyCLabs\Enum::class => 'lib/php-enum/src',
+        \OpenSpout::class => 'lib/openspout/src',
+        \Packback\Lti1p3::class => 'lib/lti1p3/src',
+        \PHPMailer\PHPMailer::class => 'lib/phpmailer/src',
+        \PhpOffice\PhpSpreadsheet::class => 'lib/phpspreadsheet/phpspreadsheet/src/PhpSpreadsheet',
+        \PhpXmlRpc::class => 'lib/phpxmlrpc/src',
+        \Phpml::class => 'lib/mlbackend/php/phpml/src/Phpml',
+        \Psr\Clock::class => 'lib/psr/clock/src',
+        \Psr\Container::class => 'lib/psr/container/src',
+        \Psr\EventDispatcher::class => 'lib/psr/event-dispatcher/src',
+        \Psr\Http\Client::class => 'lib/psr/http-client/src',
+        \Psr\Http\Message::class => [
+            'lib/psr/http-factory/src',
+            'lib/psr/http-message/src',
+        ],
+        \Psr\Http\Server::class => [
+            "lib/psr/http-server-handler/src",
+            "lib/psr/http-server-middleware/src",
+        ],
+        \Psr\Log::class => "lib/psr/log/src",
+        \Psr\SimpleCache::class => 'lib/psr/simple-cache/src',
+        \RedeyeVentures::class => 'lib/geopattern-php/src',
+        \Sabberworm\CSS::class => 'lib/php-css-parser/src',
+        \ScssPhp\ScssPhp::class => 'lib/scssphp/src',
+        \SimplePie::class => 'lib/simplepie/src',
+        \Slim::class => 'lib/slim/slim/Slim',
+        \Spatie\Cloneable::class => 'lib/spatie/php-cloneable/src',
+        \ZipStream::class => 'lib/zipstream/src',
     ];
+
+    /**
+     *  An array containing files which are normally in a package's composer/autoload.files section.
+     *
+     * PHP does not provide a mechanism for automatically including the files that methods are in.
+     *
+     * The Composer autoloader includes all files in this section of the composer.json file during the instantiation of the loader.
+     *
+     * @var array<string>
+     */
+    protected static $composerautoloadfiles = [
+        'lib/aws-sdk/src/functions.php',
+        'lib/guzzlehttp/guzzle/src/functions_include.php',
+        'lib/jmespath/src/JmesPath.php',
+        'lib/nikic/fast-route/src/functions.php',
+        'lib/php-di/php-di/src/functions.php',
+        'lib/ralouphie/getallheaders/src/getallheaders.php',
+        'lib/symfony/deprecation-contracts/function.php',
+    ];
+
+    /**
+     * Register the Moodle class autoloader.
+     */
+    public static function register_autoloader(): void {
+        if (defined('COMPONENT_CLASSLOADER')) {
+            spl_autoload_register(COMPONENT_CLASSLOADER);
+        } else {
+            spl_autoload_register([self::class, 'classloader']);
+        }
+
+        // Load any composer-driven autoload files.
+        // This is intended to mimic the behaviour of the standard Composer Autoloader.
+        foreach (static::$composerautoloadfiles as $file) {
+            $path = dirname(__DIR__, 2) . '/' . $file;
+            if (file_exists($path)) {
+                require_once($path);
+            }
+        }
+    }
 
     /**
      * Class loader for Frankenstyle named classes in standard locations.
@@ -160,7 +228,7 @@ class core_component {
             $debugging = "Class '%s' has been renamed for the autoloader and is now deprecated. Please use '%s' instead.";
             debugging(sprintf($debugging, $classname, $newclassname), DEBUG_DEVELOPER);
             if (PHP_VERSION_ID >= 70000 && preg_match('#\\\null(\\\|$)#', $classname)) {
-                throw new \coding_exception("Cannot alias $classname to $newclassname");
+                throw new coding_exception("Cannot alias $classname to $newclassname");
             }
             class_alias($newclassname, $classname);
             return;
@@ -171,6 +239,38 @@ class core_component {
         if (!empty($file)) {
             require($file);
             return;
+        }
+
+        if (defined('PHPUNIT_TEST') && PHPUNIT_TEST) {
+            // For unit tests we support classes in `\frankenstyle_component\tests\` to be loaded from
+            // `path/to/frankenstyle/component/tests/classes` directory.
+            // Note: We do *not* support the legacy `\frankenstyle_component_tests_style_classnames`.
+            if ($component = self::get_component_from_classname($classname)) {
+                $pathoptions = [
+                    '/tests/classes' => "{$component}\\tests\\",
+                    '/tests/behat' => "{$component}\\behat\\",
+                ];
+                foreach ($pathoptions as $path => $testnamespace) {
+                    if (preg_match("#^" . preg_quote($testnamespace) . "#", $classname)) {
+                        $path = self::get_component_directory($component) . $path;
+                        $relativeclassname = str_replace(
+                            $testnamespace,
+                            '',
+                            $classname,
+                        );
+                        $file = sprintf(
+                            "%s/%s.php",
+                            $path,
+                            str_replace('\\', '/', $relativeclassname),
+                        );
+                        if (!empty($file) && file_exists($file)) {
+                            require($file);
+                            return;
+                        }
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -241,7 +341,6 @@ class core_component {
 
         return $file;
     }
-
 
     /**
      * Initialise caches, always call before accessing self:: caches.
@@ -358,6 +457,17 @@ class core_component {
     }
 
     /**
+     * Reset the initialisation of the component utility.
+     *
+     * Note: It should not be necessary to call this in regular code.
+     * Please only use it where strictly required.
+     */
+    public static function reset(): void {
+        // The autoloader will re-initialise if plugintypes is null.
+        self::$plugintypes = null;
+    }
+
+    /**
      * Check whether the cache content in the supplied cache is valid.
      *
      * @param array $cache The content being loaded
@@ -390,9 +500,7 @@ class core_component {
         $keyclasses = [
             \core\exception\moodle_exception::class,
             \core\output\bootstrap_renderer::class,
-            \core\lang_string::class,
-            \renderable::class,
-            \core\url::class,
+            \core_cache\cache::class,
         ];
         foreach ($keyclasses as $classname) {
             if (!array_key_exists($classname, $cache['classmap'])) {
@@ -696,7 +804,7 @@ $cache = ' . var_export($cache, true) . ';
             if (!is_dir($fulldir)) {
                 continue;
             }
-            $items = new \DirectoryIterator($fulldir);
+            $items = new DirectoryIterator($fulldir);
             foreach ($items as $item) {
                 if ($item->isDot() || !$item->isDir()) {
                     continue;
@@ -794,7 +902,7 @@ $cache = ' . var_export($cache, true) . ';
             return;
         }
 
-        $items = new \DirectoryIterator($fulldir);
+        $items = new DirectoryIterator($fulldir);
         foreach ($items as $item) {
             if ($item->isDot()) {
                 continue;
@@ -1468,13 +1576,13 @@ $cache = ' . var_export($cache, true) . ';
                 foreach ($legacyclasses as $classname => $path) {
                     if (is_array($path)) {
                         if (!$allowsubsystems) {
-                            throw new \Exception(
+                            throw new Exception(
                                 "Invalid legacy classes path entry for {$classname}. " .
                                     "Only files within the component can be specified.",
                             );
                         }
                         if (count($path) !== 2) {
-                            throw new \Exception(
+                            throw new Exception(
                                 "Invalid legacy classes path entry for {$classname}. " .
                                     "Entries must be in the format [subsystem, path].",
                             );
@@ -1482,7 +1590,7 @@ $cache = ' . var_export($cache, true) . ';
                         [$subsystem, $path] = $path;
                         $subsystem = substr($subsystem, 5);
                         if (!array_key_exists($subsystem, self::$subsystems)) {
-                            throw new \Exception(
+                            throw new Exception(
                                 "Unknown subsystem '{$subsystem}' for legacy classes entry of '{$classname}'",
                             );
                         }
@@ -1581,10 +1689,19 @@ $cache = ' . var_export($cache, true) . ';
      * @return bool True if the plugin has a monologo icon
      */
     public static function has_monologo_icon(string $plugintype, string $pluginname): bool {
+        global $PAGE;
         $plugindir = self::get_plugin_directory($plugintype, $pluginname);
         if ($plugindir === null) {
             return false;
         }
-        return file_exists("$plugindir/pix/monologo.svg") || file_exists("$plugindir/pix/monologo.png");
+        $theme = theme_config::load($PAGE->theme->name);
+        $component = self::normalize_componentname("{$plugintype}_{$pluginname}");
+        $hassvgmonologo = $theme->resolve_image_location('monologo', $component, true) !== null;
+        $haspngmonologo = $theme->resolve_image_location('monologo', $component) !== null;
+        return $haspngmonologo || $hassvgmonologo;
     }
 }
+
+// Alias this class to the old name.
+// This should be kept here because we use this class in external tooling.
+class_alias(component::class, \core_component::class);

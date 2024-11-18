@@ -263,7 +263,7 @@ class custom_report_table extends base_report_table {
             ]);
 
             echo html_writer::tag('th', $headercell, [
-                'class' => 'border-right border-left',
+                'class' => 'border-end border-start',
                 'scope' => 'col',
                 'data-region' => 'column-header',
                 'data-column-id' => $column->get_persistent()->get('id'),
@@ -388,5 +388,14 @@ class custom_report_table extends base_report_table {
         global $CFG;
 
         return !empty($CFG->customreportsliveediting);
+    }
+
+    /**
+     * Check if the user has the capability to access this table.
+     *
+     * @return bool Return true if capability check passed.
+     */
+    public function has_capability(): bool {
+        return \core_reportbuilder\permission::can_edit_report($this->persistent);
     }
 }

@@ -1073,9 +1073,8 @@ class enrol_self_plugin extends enrol_plugin {
             }
         }
 
-        if (array_key_exists('expirynotify', $data)
-                && ($data['expirynotify'] > 0 || $data['customint2'])
-                && $data['expirythreshold'] < 86400) {
+        // If expirynotify is selected, then ensure the threshold is at least one day.
+        if (isset($data['expirynotify']) && $data['expirynotify'] > 0 && $data['expirythreshold'] < DAYSECS) {
             $errors['expirythreshold'] = get_string('errorthresholdlow', 'core_enrol');
         }
 
@@ -1123,7 +1122,7 @@ class enrol_self_plugin extends enrol_plugin {
      * @param array $fields instance fields
      * @return int id of new instance, null if can not be created
      */
-    public function add_instance($course, array $fields = null) {
+    public function add_instance($course, ?array $fields = null) {
         // In the form we are representing 2 db columns with one field.
         if (!empty($fields) && !empty($fields['expirynotify'])) {
             if ($fields['expirynotify'] == 2) {
@@ -1302,6 +1301,6 @@ class enrol_self_plugin extends enrol_plugin {
 function enrol_self_get_fontawesome_icon_map() {
     return [
         'enrol_self:withkey' => 'fa-key',
-        'enrol_self:withoutkey' => 'fa-sign-in',
+        'enrol_self:withoutkey' => 'fa-solid fa-right-to-bracket',
     ];
 }

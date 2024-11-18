@@ -19,7 +19,7 @@ namespace core_course;
 use context_user;
 use context_course;
 use ReflectionMethod;
-use cache_definition;
+use core_cache\definition;
 use core_course\cache\course_image;
 
 /**
@@ -97,7 +97,7 @@ class course_image_cache_test extends \advanced_testcase {
      */
     public function test_get_image_url_from_overview_files_return_null_if_no_summary_files_in_the_course(): void {
         $method = new ReflectionMethod(course_image::class, 'get_image_url_from_overview_files');
-        $cache = course_image::get_instance_for_cache(new cache_definition());
+        $cache = course_image::get_instance_for_cache(new definition());
 
         // Create course without files.
         $course = $this->getDataGenerator()->create_course();
@@ -109,7 +109,7 @@ class course_image_cache_test extends \advanced_testcase {
      */
     public function test_get_image_url_from_overview_files_returns_null_if_no_summary_images_in_the_course(): void {
         $method = new ReflectionMethod(course_image::class, 'get_image_url_from_overview_files');
-        $cache = course_image::get_instance_for_cache(new cache_definition());
+        $cache = course_image::get_instance_for_cache(new definition());
 
         // Create course without image files.
         $draftid2 = $this->fill_draft_area(['filename2.zip' => 'Test file contents2']);
@@ -122,10 +122,12 @@ class course_image_cache_test extends \advanced_testcase {
      */
     public function test_get_image_url_from_overview_files_returns_url_if_there_is_a_summary_image(): void {
         $method = new ReflectionMethod(course_image::class, 'get_image_url_from_overview_files');
-        $cache = course_image::get_instance_for_cache(new cache_definition());
+        $cache = course_image::get_instance_for_cache(new definition());
 
         // Create course without one image.
-        $draftid1 = $this->fill_draft_area(['filename1.jpg' => file_get_contents(__DIR__ . '/fixtures/image.jpg')]);
+        $draftid1 = $this->fill_draft_area([
+            'filename1.jpg' => file_get_contents(self::get_fixture_path(__NAMESPACE__, 'image.jpg')),
+        ]);
         $course1 = $this->getDataGenerator()->create_course(['overviewfiles_filemanager' => $draftid1]);
         $expected = $this->build_expected_course_image_url($course1, 'filename1.jpg');
         $this->assertEquals($expected, $method->invokeArgs($cache, [$course1]));
@@ -136,12 +138,12 @@ class course_image_cache_test extends \advanced_testcase {
      */
     public function test_get_image_url_from_overview_files_returns_url_of_the_first_image_if_there_are_many_summary_images(): void {
         $method = new ReflectionMethod(course_image::class, 'get_image_url_from_overview_files');
-        $cache = course_image::get_instance_for_cache(new cache_definition());
+        $cache = course_image::get_instance_for_cache(new definition());
 
         // Create course with two image files.
         $draftid1 = $this->fill_draft_area([
-            'filename1.jpg' => file_get_contents(__DIR__ . '/fixtures/image.jpg'),
-            'filename2.jpg' => file_get_contents(__DIR__ . '/fixtures/image.jpg'),
+            'filename1.jpg' => file_get_contents(self::get_fixture_path(__NAMESPACE__, 'image.jpg')),
+            'filename2.jpg' => file_get_contents(self::get_fixture_path(__NAMESPACE__, 'image.jpg')),
         ]);
         $course1 = $this->getDataGenerator()->create_course(['overviewfiles_filemanager' => $draftid1]);
 
@@ -154,13 +156,13 @@ class course_image_cache_test extends \advanced_testcase {
      */
     public function test_get_image_url_from_overview_files_returns_url_of_the_first_image_if_there_are_many_summary_files(): void {
         $method = new ReflectionMethod(course_image::class, 'get_image_url_from_overview_files');
-        $cache = course_image::get_instance_for_cache(new cache_definition());
+        $cache = course_image::get_instance_for_cache(new definition());
 
         // Create course with two image files and one zip file.
         $draftid1 = $this->fill_draft_area([
             'filename1.zip' => 'Test file contents2',
-            'filename2.jpg' => file_get_contents(__DIR__ . '/fixtures/image.jpg'),
-            'filename3.jpg' => file_get_contents(__DIR__ . '/fixtures/image.jpg'),
+            'filename2.jpg' => file_get_contents(self::get_fixture_path(__NAMESPACE__, 'image.jpg')),
+            'filename3.jpg' => file_get_contents(self::get_fixture_path(__NAMESPACE__, 'image.jpg')),
         ]);
         $course1 = $this->getDataGenerator()->create_course(['overviewfiles_filemanager' => $draftid1]);
 

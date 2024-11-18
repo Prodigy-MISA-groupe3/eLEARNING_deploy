@@ -180,7 +180,7 @@ class renderer extends \plugin_renderer_base {
      * @return string $html
      * @throws \coding_exception
      */
-    public function active_factors(string $filterfactor = null): string {
+    public function active_factors(?string $filterfactor = null): string {
         global $USER, $CFG;
 
         require_once($CFG->dirroot . '/iplookup/lib.php');
@@ -206,9 +206,9 @@ class renderer extends \plugin_renderer_base {
             $headers->remove,
         ];
         $table->colclasses = [
-            'text-left',
-            'text-left',
-            'text-left',
+            'text-start',
+            'text-start',
+            'text-start',
             'text-center',
             'text-center',
         ];

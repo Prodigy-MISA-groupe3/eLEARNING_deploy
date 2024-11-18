@@ -18,8 +18,10 @@ declare(strict_types=1);
 
 namespace core_badges\reportbuilder\local\systemreports;
 
+use core\context\system;
 use core_badges\reportbuilder\local\entities\badge;
 use core_badges\reportbuilder\local\entities\badge_issued;
+use core_reportbuilder\local\helpers\database;
 use core_reportbuilder\system_report;
 use lang_string;
 use moodle_url;
@@ -37,13 +39,19 @@ require_once("{$CFG->libdir}/badgeslib.php");
  * @package    core_badges
  * @copyright  2023 David Carrillo <davidmc@moodle.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @deprecated since 4.5. Use badges system_report instead.
+ * @todo       MDL-82383 This class will be deleted in Moodle 6.0.
  */
 class course_badges extends system_report {
 
     /**
      * Initialise report, we need to set the main table, load our entities and set columns/filters
+     *
+     * @deprecated since 4.5. Use badges system_report instead.
      */
+    #[\core\attribute\deprecated('course_badges::initialise', since: '4.5', mdl: 'MDL-82503')]
     protected function initialise(): void {
+        \core\deprecation::emit_deprecation_if_present([$this, __FUNCTION__]);
         global $USER;
         // Our main entity, it contains all of the column definitions that we need.
         $badgeentity = new badge();
@@ -52,12 +60,19 @@ class course_badges extends system_report {
         $this->set_main_table('badge', $entityalias);
         $this->add_entity($badgeentity);
 
-        $type = $this->get_parameter('type', 0, PARAM_INT);
-        $courseid = $this->get_parameter('courseid', 0, PARAM_INT);
+        $paramtype = database::generate_param_name();
+        $context = $this->get_context();
+        if ($context instanceof system) {
+            $type = BADGE_TYPE_SITE;
+            $this->add_base_condition_sql("{$entityalias}.type = :$paramtype", [$paramtype => $type]);
+        } else {
+            $type = BADGE_TYPE_COURSE;
+            $paramcourseid = database::generate_param_name();
+            $this->add_base_condition_sql("{$entityalias}.type = :$paramtype AND {$entityalias}.courseid = :$paramcourseid",
+                [$paramtype => $type, $paramcourseid => $context->instanceid]);
+        }
 
-        $this->add_base_condition_simple('type', $type);
-        $this->add_base_condition_simple('courseid', $courseid);
-        $this->add_base_condition_sql("({$entityalias}.status = " . BADGE_STATUS_ACTIVE .
+         $this->add_base_condition_sql("({$entityalias}.status = " . BADGE_STATUS_ACTIVE .
             " OR {$entityalias}.status = " . BADGE_STATUS_ACTIVE_LOCKED . ")");
 
         $badgeissuedentity = new badge_issued();
@@ -70,8 +85,11 @@ class course_badges extends system_report {
         $this->add_base_fields("{$badgeissuedalias}.uniquehash");
 
         // Now we can call our helper methods to add the content we want to include in the report.
-        $this->add_columns($badgeissuedalias);
+        $this->add_columns();
         $this->add_filters();
+
+        $this->set_initial_sort_column('badge:name', SORT_ASC);
+        $this->set_default_no_results_notice(new lang_string('nomatchingbadges', 'core_badges'));
 
         // Set if report can be downloaded.
         $this->set_downloadable(false);
@@ -81,8 +99,11 @@ class course_badges extends system_report {
      * Validates access to view this report
      *
      * @return bool
+     * @deprecated since 4.5. Use badges system_report instead.
      */
+    #[\core\attribute\deprecated('course_badges::can_view', since: '4.5', mdl: 'MDL-82503')]
     protected function can_view(): bool {
+        \core\deprecation::emit_deprecation_if_present([$this, __FUNCTION__]);
         return has_capability('moodle/badges:viewbadges', $this->get_context());
     }
 
@@ -93,16 +114,20 @@ class course_badges extends system_report {
      * unique identifier. If custom columns are needed just for this report, they can be defined here.
      *
      * @param string $badgeissuedalias
+     * @deprecated since 4.5. Use badges system_report instead.
      */
-    public function add_columns(string $badgeissuedalias): void {
-        $columns = [
+    #[\core\attribute\deprecated('course_badges::add_columns', since: '4.5', mdl: 'MDL-82503')]
+    protected function add_columns(): void {
+        \core\deprecation::emit_deprecation_if_present([$this, __FUNCTION__]);
+        $badgeissuedalias = $this->get_entity('badge_issued')->get_table_alias('badge_issued');
+
+        $this->add_columns_from_entities([
             'badge:image',
             'badge:name',
             'badge:description',
             'badge:criteria',
             'badge_issued:issued',
-        ];
-        $this->add_columns_from_entities($columns);
+        ]);
 
         $this->get_column('badge_issued:issued')
             ->set_title(new lang_string('awardedtoyou', 'core_badges'))
@@ -119,8 +144,6 @@ class course_badges extends system_report {
                 $icon = new pix_icon('i/valid', get_string('dateearned', 'badges', $date));
                 return $OUTPUT->action_icon($badgeurl, $icon, null, null, true);
             });
-
-        $this->set_initial_sort_column('badge:name', SORT_ASC);
     }
 
     /**
@@ -128,13 +151,15 @@ class course_badges extends system_report {
      *
      * They are all provided by the entities we previously added in the {@see initialise} method, referencing each by their
      * unique identifier
+     *
+     * @deprecated since 4.5. Use badges system_report instead.
      */
+    #[\core\attribute\deprecated('course_badges::add_filters', since: '4.5', mdl: 'MDL-82503')]
     protected function add_filters(): void {
-        $filters = [
+        \core\deprecation::emit_deprecation_if_present([$this, __FUNCTION__]);
+        $this->add_filters_from_entities([
             'badge:name',
             'badge_issued:issued',
-        ];
-
-        $this->add_filters_from_entities($filters);
+        ]);
     }
 }

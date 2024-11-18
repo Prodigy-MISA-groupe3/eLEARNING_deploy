@@ -25,7 +25,7 @@ namespace core;
  * @author     T.J.Hunt@open.ac.uk
  * @author     nicolas@moodle.com
  */
-class moodlelib_test extends \advanced_testcase {
+final class moodlelib_test extends \advanced_testcase {
 
     /**
      * Define a local decimal separator.
@@ -858,13 +858,15 @@ class moodlelib_test extends \advanced_testcase {
             '-13.5'                          => '',
             '0.2'                            => '',
             ''                               => '',
-            null                             => '',
         );
 
         foreach ($testvalues as $testvalue => $expectedvalue) {
             $actualvalue = clean_param($testvalue, PARAM_TIMEZONE);
             $this->assertEquals($expectedvalue, $actualvalue);
         }
+
+        // Test for null.
+        $this->assertEquals('', clean_param(null, PARAM_TIMEZONE));
     }
 
     /**
@@ -1493,14 +1495,14 @@ class moodlelib_test extends \advanced_testcase {
         $this->assertEquals($longvalue,
             $DB->get_field('user_preferences', 'value', array('userid' => $USER->id, 'name' => '_test_long_user_preference')));
 
-        // Test > 1333 char values, coding_exception expected.
-        $longvalue = str_repeat('a', 1334);
-        try {
-            set_user_preference('_test_long_user_preference', $longvalue);
-            $this->fail('Exception expected - longer than 1333 chars not allowed as preference value');
-        } catch (\moodle_exception $ex) {
-            $this->assertInstanceOf('coding_exception', $ex);
-        }
+        // Larger preference values are allowed as of MDL-46739.
+        $longervalue = str_repeat('a', 1334);
+        set_user_preference('_test_long_user_preference', $longervalue);
+        $this->assertEquals($longervalue, get_user_preferences('_test_long_user_preference'));
+        $this->assertEquals(
+            $longervalue,
+            $DB->get_field('user_preferences', 'value', ['userid' => $USER->id, 'name' => '_test_long_user_preference'])
+        );
 
         // Test invalid params.
         try {
@@ -2918,18 +2920,41 @@ EOF;
     /**
      * Testing that if the password is not cached, that it does not update
      * the user table and fire event.
+     *
+     * @dataProvider update_internal_user_password_no_cache_provider
+     * @covers ::update_internal_user_password
+     *
+     * @param string $authmethod The authentication method to set for the user.
+     * @param string|null $password The new password to set for the user.
      */
-    public function test_update_internal_user_password_no_cache(): void {
+    public function test_update_internal_user_password_no_cache(
+        string $authmethod,
+        ?string $password,
+    ): void {
         global $DB;
         $this->resetAfterTest();
 
-        $user = $this->getDataGenerator()->create_user(array('auth' => 'cas'));
+        $user = $this->getDataGenerator()->create_user(['auth' => $authmethod]);
         $DB->update_record('user', ['id' => $user->id, 'password' => AUTH_PASSWORD_NOT_CACHED]);
         $user->password = AUTH_PASSWORD_NOT_CACHED;
 
         $sink = $this->redirectEvents();
-        update_internal_user_password($user, 'wonkawonka');
+        update_internal_user_password($user, $password);
         $this->assertEquals(0, $sink->count(), 'User updated event should not fire');
+    }
+
+    /**
+     * The data provider will test the {@see test_update_internal_user_password_no_cache}
+     * for accounts using the authentication method with prevent_local_passwords set to true (no cache).
+     *
+     * @return array
+     */
+    public static function update_internal_user_password_no_cache_provider(): array {
+        return [
+            'Password is not empty' => ['cas', 'wonkawonka'],
+            'Password is an empty string' => ['oauth2', ''],
+            'Password is null' => ['oauth2', null],
+        ];
     }
 
     /**
@@ -3575,9 +3600,9 @@ EOF;
 
     /**
      * Data provider for test_generate_confirmation_link
-     * @return Array of confirmation urls and expected resultant confirmation links
+     * @return array Confirmation urls and expected resultant confirmation links
      */
-    public function generate_confirmation_link_provider() {
+    public static function generate_confirmation_link_provider(): array {
         global $CFG;
         return [
             "Simple name" => [
@@ -3645,7 +3670,7 @@ EOF;
                 "confirmationurl" => "http://moodle.org/ext.php?with=some&param=eters",
                 "expected" => "http://moodle.org/ext.php?with=some&param=eters&data=/many_-%2E%40characters%40_%40-%2E%2E-%2E%2E"
             ],
-            "Custom external confirmation url with parameters" => [
+            "Custom external confirmation url with parameters (again)" => [
                 "username" => "many_-.@characters@_@-..-..",
                 "confirmationurl" => "http://moodle.org/ext.php?with=some&data=test",
                 "expected" => "http://moodle.org/ext.php?with=some&data=/many_-%2E%40characters%40_%40-%2E%2E-%2E%2E"
@@ -5162,18 +5187,18 @@ EOT;
      * @dataProvider get_home_page_provider
      * @param string $user Whether the user is logged, guest or not logged.
      * @param int $expected Expected value after calling the get_home_page method.
-     * @param int|null $defaulthomepage The $CFG->defaulthomepage setting value.
+     * @param int|string|null $defaulthomepage The $CFG->defaulthomepage setting value.
      * @param int|null $enabledashboard Whether the dashboard should be enabled or not.
-     * @param int|null $userpreference User preference for the home page setting.
+     * @param int|string|null $userpreference User preference for the home page setting.
      * $param int|null $allowguestmymoodle The $CFG->allowguestmymoodle setting value.
      * @covers ::get_home_page
      */
     public function test_get_home_page(
         string $user,
         int $expected,
-        ?int $defaulthomepage = null,
+        int|string|null $defaulthomepage = null,
         ?int $enabledashboard = null,
-        ?int $userpreference = null,
+        int|string|null $userpreference = null,
         ?int $allowguestmymoodle = null,
     ): void {
         global $CFG, $USER;
@@ -5210,6 +5235,8 @@ EOT;
      * @return array
      */
     public static function get_home_page_provider(): array {
+        global $CFG;
+
         return [
             'No logged user' => [
                 'user' => 'nologged',
@@ -5271,6 +5298,11 @@ EOT;
                 'defaulthomepage' => HOMEPAGE_SITE,
                 'enabledashboard' => 0,
             ],
+            'Logged user. URL set as default home page.' => [
+                'user' => 'logged',
+                'expected' => HOMEPAGE_URL,
+                'defaulthomepage' => "/home",
+            ],
             'Logged user. User preference set as default page with dashboard enabled and user preference set to dashboard' => [
                 'user' => 'logged',
                 'expected' => HOMEPAGE_MY,
@@ -5299,6 +5331,13 @@ EOT;
                 'enabledashboard' => 0,
                 'userpreference' => HOMEPAGE_MYCOURSES,
             ],
+            'Logged user. User preference set as default page with user preference set to URL.' => [
+                'user' => 'logged',
+                'expected' => HOMEPAGE_URL,
+                'defaulthomepage' => HOMEPAGE_USER,
+                'enabledashboard' => null,
+                'userpreference' => "/home",
+            ],
         ];
     }
 
@@ -5319,6 +5358,39 @@ EOT;
         $CFG->enabledashboard = 0;
         $default = get_default_home_page();
         $this->assertEquals(HOMEPAGE_MYCOURSES, $default);
+    }
+
+    /**
+     * Test getting default home page for {@see HOMEPAGE_URL}
+     *
+     * @covers ::get_default_home_page_url
+     */
+    public function test_get_default_home_page_url(): void {
+        global $CFG;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $this->assertNull(get_default_home_page_url());
+
+        // Site configuration.
+        $CFG->defaulthomepage = "/home";
+        $this->assertEquals("{$CFG->wwwroot}/home", get_default_home_page_url());
+
+        // Site configuration with invalid value.
+        $CFG->defaulthomepage = "home";
+        $this->assertNull(get_default_home_page_url());
+
+        // User preference.
+        $CFG->defaulthomepage = HOMEPAGE_USER;
+
+        $userpreference = "/about";
+        set_user_preference('user_home_page_preference', $userpreference);
+        $this->assertEquals("{$CFG->wwwroot}/about", get_default_home_page_url());
+
+        // User preference with invalid value.
+        set_user_preference('user_home_page_preference', "about");
+        $this->assertNull(get_default_home_page_url());
     }
 
     /**
@@ -5550,6 +5622,47 @@ EOT;
                 true,
                 ['one'],
             ],
+        ];
+    }
+
+    /**
+     * Test case for checking the email greetings in various user notification emails.
+     *
+     * @dataProvider email_greetings_provider
+     * @param string $funcname The name of the function to call for sending the email.
+     * @param mixed $extra Any extra parameter required by the function.
+     * @covers ::send_password_change_info()
+     * @covers ::send_confirmation_email()
+     * @covers ::setnew_password_and_mail()
+     * @covers ::send_password_change_confirmation_email()
+     */
+    public function test_email_greetings($funcname, $extra): void {
+        $this->resetAfterTest();
+
+        $user = $this->getDataGenerator()->create_user();
+
+        $sink = $this->redirectEmails(); // Make sure we are redirecting emails.
+        $funcname($user, $extra);
+        $result = $sink->get_messages();
+        $sink->close();
+        // Test greetings.
+        $this->assertStringContainsString('Hi ' . $user->firstname, quoted_printable_decode($result[0]->body));
+    }
+
+    /**
+     * Data provider for test_email_greetings tests.
+     *
+     * @return array
+     */
+    public static function email_greetings_provider(): array {
+        $extrasendpasswordchangeconfirmationemail = new \stdClass();
+        $extrasendpasswordchangeconfirmationemail->token = '123';
+
+        return [
+            ['send_password_change_info', null],
+            ['send_confirmation_email', null],
+            ['setnew_password_and_mail', false],
+            ['send_password_change_confirmation_email', $extrasendpasswordchangeconfirmationemail],
         ];
     }
 }

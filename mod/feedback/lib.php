@@ -927,23 +927,6 @@ function feedback_get_context() {
 }
 
 /**
- *  returns true if the current role is faked by switching role feature
- *
- * @global object
- * @return boolean
- */
-function feedback_check_is_switchrole() {
-    global $USER;
-    if (isset($USER->switchrole) AND
-            is_array($USER->switchrole) AND
-            count($USER->switchrole) > 0) {
-
-        return true;
-    }
-    return false;
-}
-
-/**
  * count users which have not completed the feedback
  *
  * @global object
@@ -981,7 +964,7 @@ function feedback_get_incomplete_users(cm_info $cm,
                                             $group,
                                             '',
                                             true)) {
-        return false;
+        return [];
     }
     // Filter users that are not in the correct group/grouping.
     $info = new \core_availability\info_module($cm);
@@ -1079,7 +1062,7 @@ function feedback_count_complete_users($cm, $group = false) {
 function feedback_get_complete_users($cm,
                                      $group = false,
                                      $where = '',
-                                     array $params = null,
+                                     ?array $params = null,
                                      $sort = '',
                                      $startpage = false,
                                      $pagecount = false) {
@@ -1989,7 +1972,7 @@ function feedback_delete_completedtmp() {
 function feedback_create_pagebreak($feedbackid) {
     global $DB;
 
-    //check if there already is a pagebreak on the last position
+    // Disallow pagebreak if there's already one present in last position, or the feedback has no items.
     $lastposition = $DB->count_records('feedback_item', array('feedback'=>$feedbackid));
     if ($lastposition == feedback_get_last_break_position($feedbackid)) {
         return false;
@@ -2827,7 +2810,7 @@ function feedback_extend_settings_navigation(settings_navigation $settings, navi
             navigation_node::TYPE_CUSTOM, null, 'questionnode');
 
         $feedbacknode->add(get_string('templates', 'feedback'),
-            new moodle_url('/mod/feedback/manage_templates.php', ['id' => $settings->get_page()->cm->id, 'mode' => 'manage']),
+            new moodle_url('/mod/feedback/manage_templates.php', ['id' => $settings->get_page()->cm->id]),
             navigation_node::TYPE_CUSTOM, null, 'templatenode');
     }
 
@@ -2934,8 +2917,8 @@ function feedback_can_view_analysis($feedback, $context, $courseid = false) {
  */
 function mod_feedback_get_fontawesome_icon_map() {
     return [
-        'mod_feedback:required' => 'fa-exclamation-circle',
-        'mod_feedback:notrequired' => 'fa-question-circle-o',
+        'mod_feedback:notrequired' => 'fa-circle-question',
+        'mod_feedback:required' => 'fa-circle-exclamation',
     ];
 }
 

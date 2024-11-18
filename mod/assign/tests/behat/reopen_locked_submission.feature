@@ -34,7 +34,7 @@ Feature: Submissions are unlocked when a new attempt is given
       | Test assignment name  | student1  | I'm the student1 submission  |
 
     And I am on the "Test assignment name" Activity page logged in as teacher1
-    And I follow "View all submissions"
+    And I navigate to "Submissions" in current page administration
     And I change window size to "large"
     And I open the action menu in "Student 1" "table_row"
     And I change window size to "medium"
@@ -42,7 +42,7 @@ Feature: Submissions are unlocked when a new attempt is given
     And I should see "Submission changes not allowed"
     And I click on "Quick grading" "checkbox"
     And I set the field "User grade" to "49.0"
-    And I press "Save all quick grading changes"
+    And I click on "Save" "button" in the "sticky-footer" "region"
     And I should see "The grade changes were saved"
     And I press "Continue"
     Then I should see "Reopened"
@@ -63,7 +63,7 @@ Feature: Submissions are unlocked when a new attempt is given
       | Test assignment name  | student1  | I'm the student1 submission  |
 
     And I am on the "Test assignment name" Activity page logged in as teacher1
-    And I follow "View all submissions"
+    And I navigate to "Submissions" in current page administration
     And I change window size to "large"
     When I open the action menu in "Student 1" "table_row"
     And I change window size to "medium"

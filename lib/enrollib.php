@@ -849,7 +849,7 @@ function enrol_get_my_courses($fields = null, $sort = null, $limit = 0, $coursei
  * @param array $instances enrol instances of this course, improves performance
  * @return array of pix_icon
  */
-function enrol_get_course_info_icons($course, array $instances = NULL) {
+function enrol_get_course_info_icons($course, ?array $instances = NULL) {
     $icons = array();
     if (is_null($instances)) {
         $instances = enrol_get_instances($course->id, true);
@@ -2159,6 +2159,7 @@ abstract class enrol_plugin {
         $hook = new \core_enrol\hook\after_user_enrolled(
             enrolinstance: $instance,
             userenrolmentinstance: $ue,
+            roleid: $roleid,
         );
         \core\di::get(\core\hook\manager::class)->dispatch($hook);
 
@@ -2594,7 +2595,7 @@ abstract class enrol_plugin {
      * @param array instance fields
      * @return int id of new instance, null if can not be created
      */
-    public function add_instance($course, array $fields = NULL) {
+    public function add_instance($course, ?array $fields = NULL) {
         global $DB;
 
         if ($course->id == SITEID) {
@@ -3644,22 +3645,23 @@ abstract class enrol_plugin {
      * @param int $userid User ID.
      * @param int $sendoption Send email from constant ENROL_SEND_EMAIL_FROM_*
      * @param null|string $message Message to send to the user.
+     * @param int|null $roleid The assigned role ID
      */
     public function send_course_welcome_message_to_user(
         stdClass $instance,
         int $userid,
         int $sendoption,
         ?string $message = '',
+        ?int $roleid = null,
     ): void {
         global $DB;
         $context = context_course::instance($instance->courseid);
         $user = core_user::get_user($userid);
         $course = get_course($instance->courseid);
-        $courserole = $DB->get_field(
-            table: 'role',
-            return: 'shortname',
-            conditions: ['id' => $instance->roleid],
-        );
+
+        // Fallback to the instance role ID if parameter not specified.
+        $courseroleid = $roleid ?: $instance->roleid;
+        $courserole = $DB->get_record('role', ['id' => $courseroleid]);
 
         $a = new stdClass();
         $a->coursename = format_string($course->fullname, true, ['context' => $context, 'escape' => false]);
@@ -3670,7 +3672,11 @@ abstract class enrol_plugin {
                 'course' => $instance->courseid,
             ],
         ))->out();
-        $a->fullname = fullname($user);
+
+        $placeholders = \core_user::get_name_placeholders($user);
+        foreach ($placeholders as $field => $value) {
+            $a->{$field} = $value;
+        }
 
         if ($message && trim($message) !== '') {
             $placeholders = [
@@ -3689,7 +3695,7 @@ abstract class enrol_plugin {
                 $user->email,
                 $user->firstname,
                 $user->lastname,
-                $courserole,
+                role_get_name($courserole, $context),
             ];
             $message = str_replace($placeholders, $values, $message);
             if (strpos($message, '<') === false) {

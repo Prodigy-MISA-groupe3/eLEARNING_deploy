@@ -54,7 +54,7 @@ class sectionactions extends baseactions {
             'sequence' => '',
             'name' => $fields->name ?? null,
             'visible' => $fields->visible ?? 1,
-            'availability' => null,
+            'availability' => $fields->availability ?? null,
             'component' => $fields->component ?? null,
             'itemid' => $fields->itemid ?? null,
             'timemodified' => time(),
@@ -162,11 +162,11 @@ class sectionactions extends baseactions {
      *
      * @param int $position The position to add to, 0 means to the end.
      * @param bool $skipcheck the check has already been made and we know that the section with this position does not exist
-     * @return stdClass created section object)
+     * @return stdClass created section object
      */
     public function create(int $position = 0, bool $skipcheck = false): stdClass {
         $record = (object) [
-            'section' => $position,
+            'section' => ($position == 0 && !$skipcheck) ? null : $position,
         ];
         return $this->create_from_object($record, $skipcheck);
     }
@@ -367,6 +367,8 @@ class sectionactions extends baseactions {
         $fields['timemodified'] = time();
         $DB->update_record('course_sections', $fields);
 
+        $sectioninfo->get_component_instance()?->section_updated((object) $fields);
+
         // We need to update the section cache before the format options are updated.
         \course_modinfo::purge_course_section_cache_by_id($courseid, $sectioninfo->id);
         rebuild_course_cache($courseid, false, true);
@@ -404,6 +406,18 @@ class sectionactions extends baseactions {
 
         $modules = explode(',', $sectioninfo->sequence);
         $cmids = [];
+
+        // In case the section is delegated by a module, we change also the visibility for the source module.
+        if ($sectioninfo->is_delegated()) {
+            $delegateinstance = $sectioninfo->get_component_instance();
+            // We only return sections delegated by course modules. Sections delegated to other
+            // types of components must implement their own methods to get the section.
+            if ($delegateinstance && ($delegateinstance instanceof \core_courseformat\sectiondelegatemodule)) {
+                $delegator = $delegateinstance->get_cm();
+                $modules[] = $delegator->id;
+            }
+        }
+
         foreach ($modules as $moduleid) {
             $cm = get_coursemodule_from_id(null, $moduleid, $this->course->id);
             if (!$cm) {

@@ -17,7 +17,7 @@
     }
 
     // Override Bootstrap .close for better accessibility.
-    .close {
+    .btn-close {
         // Adjust the margins so the focus outline does not look clipped.
         margin: -0.8rem -0.8rem -0.8rem auto;
 
@@ -27,6 +27,17 @@
             &:focus {
                 opacity: inherit;
             }
+        }
+    }
+}
+
+/* Change the modal-dialog-scrollable class to position: static to fix the issue with popper.js and autocomplete. */
+.modal-dialog-scrollable:has(.form-autocomplete-suggestions) {
+    position: static;
+    .modal-content {
+        position: static;
+        .modal-body {
+            position: static;
         }
     }
 }

@@ -116,9 +116,11 @@ class core_renderer_cli extends core_renderer {
      * @param  float $percent
      * @param  string $msg Message
      * @param  string $estimate time remaining message
+     * @param  bool $error (Unused in cli)
      * @return string ascii fragment
      */
-    public function render_progress_bar_update(string $id, float $percent, string $msg, string $estimate): string {
+    public function render_progress_bar_update(string $id, float $percent, string $msg, string $estimate,
+        bool $error = false): string {
         $size = 55; // The width of the progress bar in chars.
         $ascii = '';
 
@@ -225,9 +227,12 @@ class core_renderer_cli extends core_renderer {
      * @param string $message The message to print out.
      * @param string $type    The type of notification. See constants on \core\output\notification.
      * @param bool $closebutton Whether to show a close icon to remove the notification (default true).
+     * @param string|null $title The title of the notification.
+     * @param ?string $titleicon if the title should have an icon you can give the icon name with the component
+     *  (e.g. 'i/circleinfo, core' or 'i/circleinfo' if the icon is from core)
      * @return string A template fragment for a notification
      */
-    public function notification($message, $type = null, $closebutton = true) {
+    public function notification($message, $type = null, $closebutton = true, ?string $title = null, ?string $titleicon = null) {
         $message = clean_text($message);
         if ($type === 'notifysuccess' || $type === 'success') {
             return "++ $message ++\n";

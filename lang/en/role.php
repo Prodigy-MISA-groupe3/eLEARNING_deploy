@@ -22,6 +22,9 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+$string['ai:acceptpolicy'] = 'Set a users AI policy acceptance';
+$string['ai:fetchanyuserpolicystatus'] = 'Get a users AI policy acceptance';
+$string['ai:fetchpolicy'] = 'Get a users AI policy acceptance';
 $string['addinganewrole'] = 'Adding a new role';
 $string['addrole'] = 'Add a new role';
 $string['advancedoverride'] = 'Advanced role override';
@@ -152,6 +155,8 @@ $string['confirmunassigntitle'] = 'Confirm role change';
 $string['confirmunassignyes'] = 'Remove';
 $string['confirmunassignno'] = 'Cancel';
 $string['contentbank:access'] = 'Access the content bank';
+$string['contentbank:changelockedcustomfields'] = 'Change content bank locked custom fields';
+$string['contentbank:configurecustomfields'] = 'Configure content bank custom fields';
 $string['contentbank:copyanycontent'] = 'Copy any content in the content bank';
 $string['contentbank:copycontent'] = 'Copy content in the content bank';
 $string['contentbank:deleteanycontent'] = 'Delete any content from the content bank';
@@ -495,6 +500,7 @@ $string['user:viewalldetails'] = 'View user full information';
 $string['user:viewdetails'] = 'View user profiles';
 $string['user:viewhiddendetails'] = 'View hidden details of users';
 $string['user:viewlastip'] = 'View user last ip address';
+$string['user:viewprofilepictures'] = 'View user pictures (if force log in enabled)';
 $string['user:viewuseractivitiesreport'] = 'See user activity reports';
 $string['user:viewusergrades'] = 'View user grades';
 $string['roleresetdefaults'] = 'Defaults';

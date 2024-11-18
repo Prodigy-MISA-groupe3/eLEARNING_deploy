@@ -88,6 +88,7 @@ define('ASSIGN_EVENT_TYPE_DUE', 'due');
 define('ASSIGN_EVENT_TYPE_GRADINGDUE', 'gradingdue');
 define('ASSIGN_EVENT_TYPE_OPEN', 'open');
 define('ASSIGN_EVENT_TYPE_CLOSE', 'close');
+define('ASSIGN_EVENT_TYPE_EXTENSION', 'extension');
 
 require_once($CFG->libdir . '/accesslib.php');
 require_once($CFG->libdir . '/formslib.php');
@@ -207,6 +208,9 @@ class assign {
 
     /** @var float grade value. */
     public $grade;
+
+    /** @var array $usersearch The content that the current user is looking for. */
+    protected array $usersearch = [];
 
     /**
      * Constructor for the base assign class.
@@ -338,6 +342,21 @@ class assign {
     }
 
     /**
+     * Set usersearch to limit results when getting list of participants.
+     *
+     * @param int|null $userid User id to search for.
+     * @param int|null $groupid Group id to limit resuts to specific group.
+     * @param string $usersearch Search string to limit results.
+     */
+    public function set_usersearch(?int $userid, ?int $groupid, string $usersearch = ''): void {
+        $usersearcharray = [];
+        $usersearcharray['userid'] = $userid;
+        $usersearcharray['groupid'] = $groupid;
+        $usersearcharray['usersearch'] = $usersearch;
+        $this->usersearch = $usersearcharray;
+    }
+
+    /**
      * Set error message.
      *
      * @param string $message The error message
@@ -351,7 +370,7 @@ class assign {
      *
      * @return array The array of error messages
      */
-    protected function get_error_messages(): array {
+    public function get_error_messages(): array {
         return $this->errors;
     }
 
@@ -575,7 +594,7 @@ class assign {
                 $action = 'viewsubmitforgradingerror';
             }
         } else if ($action == 'gradingbatchoperation') {
-            $action = $this->process_grading_batch_operation($mform);
+            $action = $this->process_grading_batch_operation();
             if ($action == 'grading') {
                 $action = 'redirect';
                 $nextpageparams['action'] = 'grading';
@@ -615,10 +634,6 @@ class assign {
         } else if ($action == 'quickgrade') {
             $message = $this->process_save_quick_grades();
             $action = 'quickgradingresult';
-        } else if ($action == 'saveoptions') {
-            $this->process_save_grading_options();
-            $action = 'redirect';
-            $nextpageparams['action'] = 'grading';
         } else if ($action == 'saveextension') {
             $action = 'grantextension';
             if ($this->process_save_extension($mform)) {
@@ -680,20 +695,20 @@ class assign {
         } else if ($action == 'grantextension') {
             $o .= $this->view_grant_extension($mform);
         } else if ($action == 'revealidentities') {
-            $o .= $this->view_reveal_identities_confirm($mform);
+            $o .= $this->view_reveal_identities_confirm();
         } else if ($action == 'removesubmissionconfirm') {
             $PAGE->add_body_class('limitedwidth');
             $o .= $this->view_remove_submission_confirm();
         } else if ($action == 'plugingradingbatchoperation') {
-            $o .= $this->view_plugin_grading_batch_operation($mform);
+            $o .= $this->view_plugin_grading_batch_operation();
         } else if ($action == 'viewpluginpage') {
              $o .= $this->view_plugin_page();
         } else if ($action == 'viewcourseindex') {
              $o .= $this->view_course_index();
         } else if ($action == 'viewbatchsetmarkingworkflowstate') {
-             $o .= $this->view_batch_set_workflow_state($mform);
+             $o .= $this->view_batch_set_workflow_state();
         } else if ($action == 'viewbatchmarkingallocation') {
-            $o .= $this->view_batch_markingallocation($mform);
+            $o .= $this->view_batch_markingallocation();
         } else if ($action == 'viewsubmitforgradingerror') {
             $o .= $this->view_error_page(get_string('submitforgrading', 'assign'), $notices);
         } else if ($action == 'fixrescalednullgrades') {
@@ -1794,7 +1809,7 @@ class assign {
      * @param int|null $userid the id of the user to load the assign instance for.
      * @return stdClass The settings
      */
-    public function get_instance(int $userid = null): stdClass {
+    public function get_instance(?int $userid = null): stdClass {
         global $USER;
         $userid = $userid ?? $USER->id;
 
@@ -2318,6 +2333,21 @@ class assign {
 
                 $additionalfilters .= ' AND uf.allocatedmarker = :markerid';
                 $params['markerid'] = $USER->id;
+            }
+
+            // A user wants to view a particular user rather than a set of users.
+            if ($this->usersearch) {
+                if (isset($this->usersearch['userid'])) {
+                    $additionalfilters .= " AND u.id = :uid";
+                    $params['uid'] = $this->usersearch['userid'];
+                } else if ($this->usersearch['usersearch'] !== '') { // A user wants to view a subset of learners that match the search criteria.
+                    [
+                        'where' => $keywordswhere,
+                        'params' => $keywordsparams,
+                    ] = \core_user::get_users_search_sql($this->context, $this->usersearch['usersearch']);
+                    $additionalfilters .= " AND $keywordswhere";
+                    $params = array_merge($params, $keywordsparams);
+                }
             }
 
             $sql = "SELECT $fields
@@ -3706,7 +3736,7 @@ class assign {
     /**
      * Download a zip file of all assignment submissions.
      *
-     * @param array|null $userids Array of user ids to download assignment submissions in a zip file
+     * @param int[]|null $userids Array of user ids to download assignment submissions in a zip file
      * @return string - If an error occurs, this will contain the error page.
      */
     protected function download_submissions($userids = null) {
@@ -4444,142 +4474,108 @@ class assign {
      * @return string
      */
     protected function view_grading_table() {
-        global $USER, $CFG, $SESSION, $PAGE;
+        global $USER, $CFG, $SESSION, $PAGE, $OUTPUT;
 
-        // Include grading options form.
-        require_once($CFG->dirroot . '/mod/assign/gradingoptionsform.php');
         require_once($CFG->dirroot . '/mod/assign/quickgradingform.php');
-        require_once($CFG->dirroot . '/mod/assign/gradingbatchoperationsform.php');
-        $o = '';
-        $cmid = $this->get_course_module()->id;
 
-        $links = array();
-        if (has_capability('gradereport/grader:view', $this->get_course_context()) &&
-                has_capability('moodle/grade:viewall', $this->get_course_context())) {
-            $gradebookurl = '/grade/report/grader/index.php?id=' . $this->get_course()->id;
-            $links[$gradebookurl] = get_string('viewgradebook', 'assign');
-        }
-        if ($this->is_blind_marking() &&
-                has_capability('mod/assign:revealidentities', $this->get_context())) {
-            $revealidentitiesurl = '/mod/assign/view.php?id=' . $cmid . '&action=revealidentities';
-            $links[$revealidentitiesurl] = get_string('revealidentities', 'assign');
-        }
-        foreach ($this->get_feedback_plugins() as $plugin) {
-            if ($plugin->is_enabled() && $plugin->is_visible()) {
-                foreach ($plugin->get_grading_actions() as $action => $description) {
-                    $url = '/mod/assign/view.php' .
-                           '?id=' .  $cmid .
-                           '&plugin=' . $plugin->get_type() .
-                           '&pluginsubtype=assignfeedback' .
-                           '&action=viewpluginpage&pluginaction=' . $action;
-                    $links[$url] = $description;
-                }
+        $submittedfilter = optional_param('status', null, PARAM_ALPHA);
+        if (isset($submittedfilter)) {
+            $validfilters = array_column($this->get_filters(), 'key');
+            $validfilters = array_diff($validfilters, [ASSIGN_FILTER_NONE]); // The 'none' filter is not a real filter.
+            if ($submittedfilter === '' || in_array($submittedfilter, $validfilters)) {
+                set_user_preference('assign_filter', $submittedfilter);
             }
         }
 
-        // Sort links alphabetically based on the link description.
-        core_collator::asort($links);
+        $submittedquickgrading = optional_param('quickgrading', null, PARAM_BOOL);
+        if (isset($submittedquickgrading)) {
+            set_user_preference('assign_quickgrading', $submittedquickgrading);
+        }
 
-        $gradingactions = new url_select($links);
-        $gradingactions->set_label(get_string('choosegradingaction', 'assign'));
-        $gradingactions->class .= ' mb-1';
+        $submitteddownloadasfolders = optional_param('downloadasfolders', null, PARAM_BOOL);
+        if (isset($submitteddownloadasfolders)) {
+            set_user_preference('assign_downloadasfolders', $submitteddownloadasfolders);
+        }
+
+        $submittedperpage = optional_param('perpage', null, PARAM_INT);
+        if (isset($submittedperpage)) {
+            set_user_preference('assign_perpage', $submittedperpage);
+        }
+
+        $o = '';
+        $cmid = $this->get_course_module()->id;
 
         $gradingmanager = get_grading_manager($this->get_context(), 'mod_assign', 'submissions');
 
         $perpage = $this->get_assign_perpage();
         $filter = get_user_preferences('assign_filter', '');
-        $markerfilter = get_user_preferences('assign_markerfilter', '');
-        $workflowfilter = get_user_preferences('assign_workflowfilter', '');
+
+        // Retrieve the 'workflowfilter' parameter, or set it to null if not provided.
+        $workflowfilter = optional_param('workflowfilter', null, PARAM_ALPHA);
+        // Check if the parameter is not null and if it exists in the list of valid workflow filters.
+        if ($workflowfilter !== null && array_key_exists($workflowfilter, $this->get_marking_workflow_filters())) {
+            // Save the valid 'workflowfilter' value as a user preference.
+            set_user_preference('assign_workflowfilter', $workflowfilter);
+        }
+
+        // Retrieve the 'markingallocationfilter' parameter, or set it to null if not provided.
+        $markingallocationfilter = optional_param('markingallocationfilter', null, PARAM_ALPHANUMEXT);
+        // Check if the parameter is not null and if it exists in the list of valid marking allocation filters.
+        if ($markingallocationfilter !== null &&
+                array_key_exists($markingallocationfilter, $this->get_marking_allocation_filters())) {
+            // Save the valid 'markingallocationfilter' value as a user preference.
+            set_user_preference('assign_markerfilter', $markingallocationfilter);
+        }
+
+        // Retrieve the 'suspendedparticipantsfilter' parameter, or set it to null if not provided.
+        $suspendedparticipantsfilter = optional_param('suspendedparticipantsfilter', null, PARAM_BOOL);
+        if ($suspendedparticipantsfilter !== null &&
+                has_capability('moodle/course:viewsuspendedusers', $this->get_context())) {
+            // Save the 'suspendedparticipantsfilter' value as a user preference.
+            set_user_preference('grade_report_showonlyactiveenrol', !$suspendedparticipantsfilter);
+        }
+
         $controller = $gradingmanager->get_active_controller();
         $showquickgrading = empty($controller) && $this->can_grade();
         $quickgrading = get_user_preferences('assign_quickgrading', false);
-        $showonlyactiveenrolopt = has_capability('moodle/course:viewsuspendedusers', $this->context);
-        $downloadasfolders = get_user_preferences('assign_downloadasfolders', 1);
 
         $markingallocation = $this->get_instance()->markingworkflow &&
             $this->get_instance()->markingallocation &&
             has_capability('mod/assign:manageallocations', $this->context);
-        // Get markers to use in drop lists.
-        $markingallocationoptions = array();
-        if ($markingallocation) {
-            list($sort, $params) = users_order_by_sql('u');
-            // Only enrolled users could be assigned as potential markers.
-            $markers = get_enrolled_users($this->context, 'mod/assign:grade', 0, 'u.*', $sort);
-            $markingallocationoptions[''] = get_string('filternone', 'assign');
-            $markingallocationoptions[ASSIGN_MARKER_FILTER_NO_MARKER] = get_string('markerfilternomarker', 'assign');
-            $viewfullnames = has_capability('moodle/site:viewfullnames', $this->context);
-            foreach ($markers as $marker) {
-                $markingallocationoptions[$marker->id] = fullname($marker, $viewfullnames);
-            }
-        }
 
         $markingworkflow = $this->get_instance()->markingworkflow;
-        // Get marking states to show in form.
-        $markingworkflowoptions = $this->get_marking_workflow_filters();
 
-        // Print options for changing the filter and changing the number of results per page.
-        $gradingoptionsformparams = array('cm'=>$cmid,
-                                          'contextid'=>$this->context->id,
-                                          'userid'=>$USER->id,
-                                          'submissionsenabled'=>$this->is_any_submission_plugin_enabled(),
-                                          'showquickgrading'=>$showquickgrading,
-                                          'quickgrading'=>$quickgrading,
-                                          'markingworkflowopt'=>$markingworkflowoptions,
-                                          'markingallocationopt'=>$markingallocationoptions,
-                                          'showonlyactiveenrolopt'=>$showonlyactiveenrolopt,
-                                          'showonlyactiveenrol' => $this->show_only_active_users(),
-                                          'downloadasfolders' => $downloadasfolders);
-
-        $classoptions = array('class'=>'gradingoptionsform');
-        $gradingoptionsform = new mod_assign_grading_options_form(null,
-                                                                  $gradingoptionsformparams,
-                                                                  'post',
-                                                                  '',
-                                                                  $classoptions);
-
-        $batchformparams = array('cm'=>$cmid,
-                                 'submissiondrafts'=>$this->get_instance()->submissiondrafts,
-                                 'duedate'=>$this->get_instance()->duedate,
-                                 'maxattempts' => $this->get_instance()->maxattempts,
-                                 'attemptreopenmethod'=>$this->get_instance()->attemptreopenmethod,
-                                 'feedbackplugins'=>$this->get_feedback_plugins(),
-                                 'context'=>$this->get_context(),
-                                 'markingworkflow'=>$markingworkflow,
-                                 'markingallocation'=>$markingallocation);
-        $classoptions = [
-            'class' => 'gradingbatchoperationsform',
-            'data-double-submit-protection' => 'off',
-        ];
-
-        $gradingbatchoperationsform = new mod_assign_grading_batch_operations_form(null,
-                                                                                   $batchformparams,
-                                                                                   'post',
-                                                                                   '',
-                                                                                   $classoptions);
-
-        $gradingoptionsdata = new stdClass();
-        $gradingoptionsdata->perpage = $perpage;
-        $gradingoptionsdata->filter = $filter;
-        $gradingoptionsdata->markerfilter = $markerfilter;
-        $gradingoptionsdata->workflowfilter = $workflowfilter;
-        $gradingoptionsform->set_data($gradingoptionsdata);
-
-        $buttons = new \mod_assign\output\grading_actionmenu($this->get_course_module()->id,
-             $this->is_any_submission_plugin_enabled(), $this->count_submissions());
+        // Load the table of submissions, to be printed further down.
+        $usequickgrading = $showquickgrading && $quickgrading;
+        $gradingtable = new assign_grading_table($this, $perpage, $filter, 0, $usequickgrading);
+        $gradingtable->responsive = false;
+        $table = $this->get_renderer()->render($gradingtable);
+        // This initialises the selected first/last initials for the action menu.
+        $gradingtable->initialbars(true);
+        $buttons = new \mod_assign\output\grading_actionmenu(
+            cmid: $this->get_course_module()->id,
+            assign: $this,
+            userinitials: [
+                'firstname' => $gradingtable->get_initial_first(),
+                'lastname' => $gradingtable->get_initial_last(),
+            ]
+        );
         $actionformtext = $this->get_renderer()->render($buttons);
         $currenturl = new moodle_url('/mod/assign/view.php', ['id' => $this->get_course_module()->id, 'action' => 'grading']);
         $PAGE->activityheader->set_attrs(['hidecompletion' => true]);
 
+        $PAGE->requires->js_call_amd('mod_assign/user', 'init', [$currenturl->out(false)]);
+
         // Conditionally add the group JS if we have groups enabled.
-        if ($this->get_course()->groupmode) {
-            $PAGE->requires->js_call_amd('core_course/actionbar/group', 'init', [$currenturl->out(false)]);
+        if (groups_get_activity_groupmode($this->get_course_module(), $this->get_course())) {
+            $PAGE->requires->js_call_amd('core_course/actionbar/group', 'init', [$currenturl->out(false), $cmid]);
         }
 
         $header = new assign_header($this->get_instance(),
                                     $this->get_context(),
                                     false,
                                     $this->get_course_module()->id,
-                                    get_string('grading', 'assign'),
+                                    get_string('gradeitem:submissions', 'assign'),
                                     '',
                                     '',
                                     $currenturl);
@@ -4587,40 +4583,40 @@ class assign {
 
         $o .= $actionformtext;
 
-        $o .= $this->get_renderer()->render($gradingactions);
-
-        // Plagiarism update status apearring in the grading book.
-        if (!empty($CFG->enableplagiarism)) {
-            require_once($CFG->libdir . '/plagiarismlib.php');
-            $o .= plagiarism_update_status($this->get_course(), $this->get_course_module());
-        }
-
         if ($this->is_blind_marking() && has_capability('mod/assign:viewblinddetails', $this->get_context())) {
             $o .= $this->get_renderer()->notification(get_string('blindmarkingenabledwarning', 'assign'), 'notifymessage');
         }
 
-        // Load and print the table of submissions.
-        if ($showquickgrading && $quickgrading) {
-            $gradingtable = new assign_grading_table($this, $perpage, $filter, 0, true);
-            $gradingtable->responsive = false;
-            $table = $this->get_renderer()->render($gradingtable);
+        // Print the table of submissions.
+        $footerdata = [
+            'perpage' => $gradingtable->get_paging_selector(),
+            'pagingbar' => $gradingtable->get_paging_bar(),
+            'hassubmit' => $usequickgrading,
+            'sendstudentnotifications' => $this->get_instance()->sendstudentnotifications,
+        ];
+        $footer = new core\output\sticky_footer($OUTPUT->render_from_template('mod_assign/grading_sticky_footer', $footerdata));
+
+        if ($usequickgrading) {
             $page = optional_param('page', null, PARAM_INT);
-            $quickformparams = array('cm'=>$this->get_course_module()->id,
-                                     'gradingtable'=>$table,
-                                     'sendstudentnotifications' => $this->get_instance()->sendstudentnotifications,
-                                     'page' => $page);
+            $PAGE->requires->js_call_amd('mod_assign/quick_grading', 'init', []);
+            $quickformparams = [
+                'cm' => $this->get_course_module()->id,
+                'gradingtable' => $table,
+                'page' => $page,
+                'footer' => $this->get_renderer()->render($footer),
+            ];
             $quickgradingform = new mod_assign_quick_grading_form(null, $quickformparams);
 
             $o .= $this->get_renderer()->render(new assign_form('quickgradingform', $quickgradingform));
         } else {
-            $gradingtable = new assign_grading_table($this, $perpage, $filter, 0, false);
-            $gradingtable->responsive = false;
-            $o .= $this->get_renderer()->render($gradingtable);
+            $o .= $table;
+            $o .= $this->get_renderer()->render($footer);
         }
 
         if ($this->can_grade()) {
             // We need to store the order of uses in the table as the person may wish to grade them.
             // This is done based on the row number of the user.
+            // Pagination has be added before this because calling get_column_data will reset the pagination.
             $useridlist = $gradingtable->get_column_data('userid');
             $SESSION->mod_assign_useridlist[$this->get_useridlist_key()] = $useridlist;
         }
@@ -4628,14 +4624,41 @@ class assign {
         $currentgroup = groups_get_activity_group($this->get_course_module(), true);
         $users = array_keys($this->list_participants($currentgroup, true));
         if (count($users) != 0 && $this->can_grade()) {
-            // If no enrolled user in a course then don't display the batch operations feature.
-            $assignform = new assign_form('gradingbatchoperationsform', $gradingbatchoperationsform);
-            $o .= $this->get_renderer()->render($assignform);
+            $jsparams = [];
+            $jsparams['message'] = !empty($CFG->messaging)
+                && has_all_capabilities(['moodle/site:sendmessage', 'moodle/course:bulkmessaging'], $this->context);
+            $jsparams['submissiondrafts'] = !empty($this->get_instance()->submissiondrafts);
+            $jsparams['removesubmission'] = has_capability('mod/assign:editothersubmission', $this->context);
+            $jsparams['extend'] = $this->get_instance()->duedate && has_capability('mod/assign:grantextension', $this->context);
+
+            $multipleattemptsallowed = $this->get_instance()->maxattempts > 1
+                || $this->get_instance()->maxattempts == ASSIGN_UNLIMITED_ATTEMPTS;
+            $jsparams['grantattempt'] =
+                $multipleattemptsallowed && $this->get_instance()->attemptreopenmethod == ASSIGN_ATTEMPT_REOPEN_METHOD_MANUAL;
+
+            $jsparams['pluginoperations'] = [];
+            foreach ($this->get_feedback_plugins() as $plugin) {
+                if ($plugin->is_visible() && $plugin->is_enabled()) {
+                    foreach ($plugin->get_grading_batch_operation_details() as $operation) {
+                        $jsparams['pluginoperations'][] = [
+                            'key' => 'plugingradingbatchoperation_' . $plugin->get_type() . '_' . $operation->key,
+                            'label' => $operation->label,
+                            'icon' => $operation->icon,
+                            'confirmationtitle' => $operation->confirmationtitle,
+                            'confirmationquestion' => $operation->confirmationquestion,
+                        ];
+                    }
+                }
+            }
+
+            $jsparams['workflowstate'] = !empty($this->get_instance()->markingworkflow);
+            $jsparams['markingallocation'] = !empty($this->get_instance()->markingallocation);
+            $jsparams['cmid'] = $this->get_course_module()->id;
+            $jsparams['sesskey'] = sesskey();
+
+            $PAGE->requires->js_call_amd('mod_assign/bulkactions/grading/bulk_actions', 'init', [$jsparams]);
         }
-        $assignform = new assign_form('gradingoptionsform',
-                                      $gradingoptionsform,
-                                      'M.mod_assign.init_grading_options');
-        $o .= $this->get_renderer()->render($assignform);
+
         return $o;
     }
 
@@ -4696,7 +4719,10 @@ class assign {
      * @return string
      */
     protected function view_grading_page() {
-        global $CFG;
+        global $CFG, $PAGE;
+
+        // Ensure that the 'Submissions' navigation node is highlighted as 'active' in the secondary navigation.
+        $PAGE->set_secondary_active_tab('mod_assign_submissions');
 
         $o = '';
         // Need submit permission to submit an assignment.
@@ -4984,112 +5010,84 @@ class assign {
 
     /**
      * Allows the plugin to show a batch grading operation page.
+     * You should confirm sesskey before calling this function.
      *
-     * @param moodleform $mform
      * @return none
      */
-    protected function view_plugin_grading_batch_operation($mform) {
+    protected function view_plugin_grading_batch_operation() {
         require_capability('mod/assign:grade', $this->context);
         $prefix = 'plugingradingbatchoperation_';
 
-        if ($data = $mform->get_data()) {
-            $tail = substr($data->operation, strlen($prefix));
-            list($plugintype, $action) = explode('_', $tail, 2);
+        $operation = required_param('operation', PARAM_ALPHAEXT);
 
-            $plugin = $this->get_feedback_plugin_by_type($plugintype);
-            if ($plugin) {
-                $users = $data->selectedusers;
-                $userlist = explode(',', $users);
-                echo $plugin->grading_batch_operation($action, $userlist);
-                return;
-            }
+        $tail = substr($operation, strlen($prefix));
+        list($plugintype, $action) = explode('_', $tail, 2);
+
+        $plugin = $this->get_feedback_plugin_by_type($plugintype);
+        if ($plugin) {
+            $users = required_param('selectedusers', PARAM_SEQUENCE);
+            $userlist = explode(',', $users);
+            echo $plugin->grading_batch_operation($action, $userlist);
+            return;
         }
+
         throw new \moodle_exception('invalidformdata', '');
     }
 
     /**
      * Ask the user to confirm they want to perform this batch operation
      *
-     * @param moodleform $mform Set to a grading batch operations form
      * @return string - the page to view after processing these actions
      */
-    protected function process_grading_batch_operation(& $mform) {
-        global $CFG;
-        require_once($CFG->dirroot . '/mod/assign/gradingbatchoperationsform.php');
+    protected function process_grading_batch_operation() {
         require_sesskey();
 
-        $markingallocation = $this->get_instance()->markingworkflow &&
-            $this->get_instance()->markingallocation &&
-            has_capability('mod/assign:manageallocations', $this->context);
+        $operation = required_param('operation', PARAM_ALPHAEXT);
+        $selectedusers = required_param('selectedusers', PARAM_SEQUENCE);
 
-        $batchformparams = array('cm'=>$this->get_course_module()->id,
-                                 'submissiondrafts'=>$this->get_instance()->submissiondrafts,
-                                 'duedate'=>$this->get_instance()->duedate,
-                                 'maxattempts' => $this->get_instance()->maxattempts,
-                                 'attemptreopenmethod'=>$this->get_instance()->attemptreopenmethod,
-                                 'feedbackplugins'=>$this->get_feedback_plugins(),
-                                 'context'=>$this->get_context(),
-                                 'markingworkflow'=>$this->get_instance()->markingworkflow,
-                                 'markingallocation'=>$markingallocation);
-        $formclasses = [
-            'class' => 'gradingbatchoperationsform',
-            'data-double-submit-protection' => 'off'
-        ];
+        // Get the list of users.
+        $userlist = explode(',', $selectedusers);
 
-        $mform = new mod_assign_grading_batch_operations_form(null,
-                                                              $batchformparams,
-                                                              'post',
-                                                              '',
-                                                              $formclasses);
+        $prefix = 'plugingradingbatchoperation_';
 
-        if ($data = $mform->get_data()) {
-            // Get the list of users.
-            $users = $data->selectedusers;
-            $userlist = explode(',', $users);
+        if ($operation == 'grantextension') {
+            return 'grantextension';
+        } else if ($operation == 'setmarkingworkflowstate') {
+            return 'viewbatchsetmarkingworkflowstate';
+        } else if ($operation == 'setmarkingallocation') {
+            return 'viewbatchmarkingallocation';
+        } else if (strpos($operation, $prefix) === 0) {
+            $tail = substr($operation, strlen($prefix));
+            list($plugintype, $action) = explode('_', $tail, 2);
 
-            $prefix = 'plugingradingbatchoperation_';
-
-            if ($data->operation == 'grantextension') {
-                // Reset the form so the grant extension page will create the extension form.
-                $mform = null;
-                return 'grantextension';
-            } else if ($data->operation == 'setmarkingworkflowstate') {
-                return 'viewbatchsetmarkingworkflowstate';
-            } else if ($data->operation == 'setmarkingallocation') {
-                return 'viewbatchmarkingallocation';
-            } else if (strpos($data->operation, $prefix) === 0) {
-                $tail = substr($data->operation, strlen($prefix));
-                list($plugintype, $action) = explode('_', $tail, 2);
-
-                $plugin = $this->get_feedback_plugin_by_type($plugintype);
-                if ($plugin) {
-                    return 'plugingradingbatchoperation';
-                }
+            $plugin = $this->get_feedback_plugin_by_type($plugintype);
+            if ($plugin) {
+                return 'plugingradingbatchoperation';
             }
+        }
 
-            if ($data->operation == 'downloadselected') {
-                $this->download_submissions($userlist);
-            } else {
-                foreach ($userlist as $userid) {
-                    if ($data->operation == 'lock') {
-                        $this->process_lock_submission($userid);
-                    } else if ($data->operation == 'unlock') {
-                        $this->process_unlock_submission($userid);
-                    } else if ($data->operation == 'reverttodraft') {
-                        $this->process_revert_to_draft($userid);
-                    } else if ($data->operation == 'removesubmission') {
-                        $this->process_remove_submission($userid);
-                    } else if ($data->operation == 'addattempt') {
-                        if (!$this->get_instance()->teamsubmission) {
-                            $this->process_add_attempt($userid);
-                        }
+        if ($operation == 'downloadselected') {
+            $this->download_submissions($userlist);
+        } else {
+            foreach ($userlist as $userid) {
+                if ($operation == 'lock') {
+                    $this->process_lock_submission($userid);
+                } else if ($operation == 'unlock') {
+                    $this->process_unlock_submission($userid);
+                } else if ($operation == 'reverttodraft') {
+                    $this->process_revert_to_draft($userid);
+                } else if ($operation == 'removesubmission') {
+                    $this->process_remove_submission($userid);
+                } else if ($operation == 'addattempt') {
+                    if (!$this->get_instance()->teamsubmission) {
+                        $this->process_add_attempt($userid);
                     }
                 }
             }
-            if ($this->get_instance()->teamsubmission && $data->operation == 'addattempt') {
-                // This needs to be handled separately so that each team submission is only re-opened one time.
-                $this->process_add_attempt_group($userlist);
-            }
+        }
+        if ($this->get_instance()->teamsubmission && $operation == 'addattempt') {
+            // This needs to be handled separately so that each team submission is only re-opened one time.
+            $this->process_add_attempt_group($userlist);
         }
 
         return 'grading';
@@ -5097,19 +5095,18 @@ class assign {
 
     /**
      * Shows a form that allows the workflow state for selected submissions to be changed.
+     * You should confirm sesskey before calling this function.
      *
-     * @param moodleform $mform Set to a grading batch operations form
      * @return string - the page to view after processing these actions
      */
-    protected function view_batch_set_workflow_state($mform) {
+    protected function view_batch_set_workflow_state() {
         global $CFG, $DB;
 
         require_once($CFG->dirroot . '/mod/assign/batchsetmarkingworkflowstateform.php');
 
         $o = '';
 
-        $submitteddata = $mform->get_data();
-        $users = $submitteddata->selectedusers;
+        $users = required_param('selectedusers', PARAM_SEQUENCE);
         $userlist = explode(',', $users);
 
         $formdata = array('id' => $this->get_course_module()->id,
@@ -5162,19 +5159,18 @@ class assign {
 
     /**
      * Shows a form that allows the allocated marker for selected submissions to be changed.
+     * You should confirm sesskey before calling this function.
      *
-     * @param moodleform $mform Set to a grading batch operations form
      * @return string - the page to view after processing these actions
      */
-    public function view_batch_markingallocation($mform) {
+    public function view_batch_markingallocation() {
         global $CFG, $DB;
 
         require_once($CFG->dirroot . '/mod/assign/batchsetallocatedmarkerform.php');
 
         $o = '';
 
-        $submitteddata = $mform->get_data();
-        $users = $submitteddata->selectedusers;
+        $users = required_param('selectedusers', PARAM_SEQUENCE);
         $userlist = explode(',', $users);
 
         $formdata = array('id' => $this->get_course_module()->id,
@@ -6330,7 +6326,8 @@ class assign {
         }
 
         $cm = $this->get_course_module();
-        if (groups_get_activity_groupmode($cm) == SEPARATEGROUPS) {
+        if (groups_get_activity_groupmode($cm) == SEPARATEGROUPS &&
+                !has_capability('moodle/site:accessallgroups', $this->context, $graderid)) {
             $sharedgroupmembers = $this->get_shared_group_members($cm, $graderid);
             return in_array($userid, $sharedgroupmembers);
         }
@@ -6905,7 +6902,8 @@ class assign {
      * @return boolean
      */
     public function save_user_extension($userid, $extensionduedate) {
-        global $DB;
+        global $DB, $CFG;
+        require_once($CFG->dirroot.'/calendar/lib.php');
 
         // Need submit permission to submit an assignment.
         require_capability('mod/assign:grantextension', $this->context);
@@ -6935,6 +6933,48 @@ class assign {
 
         if ($result) {
             \mod_assign\event\extension_granted::create_from_assign($this, $userid)->trigger();
+
+            $cm = $this->get_course_module();
+            $instance = $this->get_instance();
+
+            if ($extensionduedate) {
+                $event = $DB->get_record('event', [
+                    'userid' => $userid,
+                    'eventtype' => ASSIGN_EVENT_TYPE_EXTENSION,
+                    'modulename' => 'assign',
+                    'instance' => $instance->id,
+                ]);
+
+                if ($event) {
+                    $event->timestart = $extensionduedate;
+                    $DB->update_record('event', $event);
+                } else {
+                    $event = new stdClass();
+                    $event->type          = CALENDAR_EVENT_TYPE_ACTION;
+                    $event->name          = get_string('calendarextension', 'assign', $instance->name);
+                    $event->description   = format_module_intro('assign', $instance, $cm->id);
+                    $event->format        = FORMAT_HTML;
+                    $event->courseid      = 0;
+                    $event->groupid       = 0;
+                    $event->userid        = $userid;
+                    $event->modulename    = 'assign';
+                    $event->instance      = $instance->id;
+                    $event->timestart     = $extensionduedate;
+                    $event->timeduration  = 0;
+                    $event->visible       = instance_is_visible('assign', $instance);
+                    $event->eventtype     = ASSIGN_EVENT_TYPE_EXTENSION;
+                    $event->priority      = null;
+
+                    calendar_event::create($event, false);
+                }
+            } else {
+                $DB->delete_records('event', [
+                  'userid' => $userid,
+                  'eventtype' => ASSIGN_EVENT_TYPE_EXTENSION,
+                  'modulename' => 'assign',
+                  'instance' => $instance->id,
+                ]);
+            }
         }
         return $result;
     }
@@ -7312,84 +7352,18 @@ class assign {
     /**
      * Save grading options.
      *
+     * @deprecated since Moodle 4.5
+     * @todo Final deprecation in Moodle 6.0. See MDL-82876.
      * @return void
      */
+    #[\core\attribute\deprecated(
+        'null',
+        since: '4.5',
+        reason: 'It is no longer used.',
+        mdl: 'MDL-82681',
+    )]
     protected function process_save_grading_options() {
-        global $USER, $CFG;
-
-        // Include grading options form.
-        require_once($CFG->dirroot . '/mod/assign/gradingoptionsform.php');
-
-        // Need submit permission to submit an assignment.
-        $this->require_view_grades();
-        require_sesskey();
-
-        // Is advanced grading enabled?
-        $gradingmanager = get_grading_manager($this->get_context(), 'mod_assign', 'submissions');
-        $controller = $gradingmanager->get_active_controller();
-        $showquickgrading = empty($controller);
-        if (!is_null($this->context)) {
-            $showonlyactiveenrolopt = has_capability('moodle/course:viewsuspendedusers', $this->context);
-        } else {
-            $showonlyactiveenrolopt = false;
-        }
-
-        $markingallocation = $this->get_instance()->markingworkflow &&
-            $this->get_instance()->markingallocation &&
-            has_capability('mod/assign:manageallocations', $this->context);
-        // Get markers to use in drop lists.
-        $markingallocationoptions = array();
-        if ($markingallocation) {
-            $markingallocationoptions[''] = get_string('filternone', 'assign');
-            $markingallocationoptions[ASSIGN_MARKER_FILTER_NO_MARKER] = get_string('markerfilternomarker', 'assign');
-            list($sort, $params) = users_order_by_sql('u');
-            // Only enrolled users could be assigned as potential markers.
-            $markers = get_enrolled_users($this->context, 'mod/assign:grade', 0, 'u.*', $sort);
-            foreach ($markers as $marker) {
-                $markingallocationoptions[$marker->id] = fullname($marker);
-            }
-        }
-
-        // Get marking states to show in form.
-        $markingworkflowoptions = $this->get_marking_workflow_filters();
-
-        $gradingoptionsparams = array('cm'=>$this->get_course_module()->id,
-                                      'contextid'=>$this->context->id,
-                                      'userid'=>$USER->id,
-                                      'submissionsenabled'=>$this->is_any_submission_plugin_enabled(),
-                                      'showquickgrading'=>$showquickgrading,
-                                      'quickgrading'=>false,
-                                      'markingworkflowopt' => $markingworkflowoptions,
-                                      'markingallocationopt' => $markingallocationoptions,
-                                      'showonlyactiveenrolopt'=>$showonlyactiveenrolopt,
-                                      'showonlyactiveenrol' => $this->show_only_active_users(),
-                                      'downloadasfolders' => get_user_preferences('assign_downloadasfolders', 1));
-        $mform = new mod_assign_grading_options_form(null, $gradingoptionsparams);
-        if ($formdata = $mform->get_data()) {
-            set_user_preference('assign_perpage', $formdata->perpage);
-            if (isset($formdata->filter)) {
-                set_user_preference('assign_filter', $formdata->filter);
-            }
-            if (isset($formdata->markerfilter)) {
-                set_user_preference('assign_markerfilter', $formdata->markerfilter);
-            }
-            if (isset($formdata->workflowfilter)) {
-                set_user_preference('assign_workflowfilter', $formdata->workflowfilter);
-            }
-            if ($showquickgrading) {
-                set_user_preference('assign_quickgrading', isset($formdata->quickgrading));
-            }
-            if (isset($formdata->downloadasfolders)) {
-                set_user_preference('assign_downloadasfolders', 1); // Enabled.
-            } else {
-                set_user_preference('assign_downloadasfolders', 0); // Disabled.
-            }
-            if (!empty($showonlyactiveenrolopt)) {
-                $showonlyactiveenrol = isset($formdata->showonlyactiveenrol);
-                set_user_preference('grade_report_showonlyactiveenrol', $showonlyactiveenrol);
-                $this->showonlyactiveenrol = $showonlyactiveenrol;
-            }
-        }
+        \core\deprecation::emit_deprecation_if_present([self::class, __FUNCTION__]);
     }
 
     /**
@@ -9570,7 +9544,7 @@ class assign {
             }
             return $result;
         }
-        return $markingworkflowoptions;
+        return $markingallocationoptions;
     }
 
     /**
@@ -9607,35 +9581,46 @@ class assign {
     /**
      * Return array of valid search filters for the grading interface.
      *
+     * @param bool $grouped Whether to return the filters grouped or not.
      * @return array
      */
-    public function get_filters() {
-        $filterkeys = [
-            ASSIGN_FILTER_NOT_SUBMITTED,
-            ASSIGN_FILTER_DRAFT,
-            ASSIGN_FILTER_SUBMITTED,
-            ASSIGN_FILTER_REQUIRE_GRADING,
-            ASSIGN_FILTER_GRANTED_EXTENSION
+    public function get_filters(bool $grouped = false): array {
+        $groupedfilterkeys = [
+            [
+                ASSIGN_FILTER_NOT_SUBMITTED,
+                ASSIGN_FILTER_DRAFT,
+                ASSIGN_FILTER_SUBMITTED,
+                ASSIGN_FILTER_REQUIRE_GRADING,
+            ],
+            [
+                ASSIGN_FILTER_GRANTED_EXTENSION,
+            ],
         ];
 
         $current = get_user_preferences('assign_filter', '');
 
         $filters = [];
         // First is always "no filter" option.
-        array_push($filters, [
-            'key' => 'none',
-            'name' => get_string('filternone', 'assign'),
-            'active' => ($current == '')
-        ]);
+        $filters[0] = [
+            [
+                'key' => ASSIGN_FILTER_NONE,
+                'name' => get_string('filterall', 'assign'),
+                'active' => ($current == ''),
+            ],
+        ];
 
-        foreach ($filterkeys as $key) {
-            array_push($filters, [
-                'key' => $key,
-                'name' => get_string('filter' . $key, 'assign'),
-                'active' => ($current == $key)
-            ]);
+        foreach ($groupedfilterkeys as $group => $filterkeys) {
+            foreach ($filterkeys as $key) {
+                $filters[$group] = $filters[$group] ?? [];
+                $filters[$group][] = [
+                    'key' => $key,
+                    'name' => get_string('filter' . $key, 'assign'),
+                    'active' => ($current == $key),
+                ];
+            }
         }
-        return $filters;
+
+        return $grouped ? $filters : array_merge(...$filters);
     }
 
     /**

@@ -1323,7 +1323,6 @@ function lti_verify_with_keyset($jwtparam, $keyseturl, $clientid) {
             throw new moodle_exception('errornocachedkeysetfound', 'mod_lti');
         }
         $keysetarr = json_decode($keyset, true);
-        // JWK::parseKeySet uses RS256 algorithm by default.
         $keys = JWK::parseKeySet($keysetarr);
         $jwt = JWT::decode($jwtparam, $keys);
     } catch (Exception $e) {
@@ -1332,7 +1331,10 @@ function lti_verify_with_keyset($jwtparam, $keyseturl, $clientid) {
         $keysetarr = json_decode($keyset, true);
 
         // Fix for firebase/php-jwt's dependency on the optional 'alg' property in the JWK.
+        // The fix_jwks_alg() call only fixes a single, matched key and will leave others present (which may be missing alg too),
+        // Remaining keys missing alg are excluded since they cannot be used for decoding anyway (no match to JWT kid).
         $keysetarr = jwks_helper::fix_jwks_alg($keysetarr, $jwtparam);
+        $keysetarr['keys'] = array_filter($keysetarr['keys'], fn($key) => isset($key['alg']));
 
         // JWK::parseKeySet uses RS256 algorithm by default.
         $keys = JWK::parseKeySet($keysetarr);
@@ -1516,8 +1518,7 @@ function content_item_to_form(object $tool, object $typeconfig, object $item): s
         $config->instructorcustomparameters = params_to_string($item->custom);
     }
 
-    // Set the status, allowing the form to validate, and pass an indicator to the relevant form field.
-    $config->selectcontentstatus = true;
+    // Pass an indicator to the relevant form field.
     $config->selectcontentindicator = $OUTPUT->pix_icon('i/valid', get_string('yes')) . get_string('contentselected', 'mod_lti');
 
     return $config;

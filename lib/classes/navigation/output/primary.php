@@ -20,6 +20,7 @@ use renderable;
 use renderer_base;
 use templatable;
 use custom_menu;
+use filter_manager;
 
 /**
  * Primary navigation renderable
@@ -131,6 +132,13 @@ class primary implements renderable, templatable {
         // Early return if a custom menu does not exists.
         if (empty($custommenuitems)) {
             return [];
+        }
+
+        // If filtering of the primary custom menu is enabled, apply only the string filters.
+        if (!empty($CFG->navfilter && !empty($CFG->stringfilters))) {
+            // Apply filters that are enabled for Content and Headings.
+            $filtermanager = \filter_manager::instance();
+            $custommenuitems = $filtermanager->filter_string($custommenuitems, \context_system::instance());
         }
 
         $currentlang = current_language();

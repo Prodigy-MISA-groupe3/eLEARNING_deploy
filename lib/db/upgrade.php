@@ -1170,5 +1170,309 @@ function xmldb_main_upgrade($oldversion) {
     // Automatically generated Moodle v4.4.0 release upgrade line.
     // Put any upgrade step following this.
 
+    if ($oldversion < 2024070500.01) {
+        // Remove the site_contactable config of the hub plugin from config plugin table.
+        unset_config('site_contactable', 'hub');
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024070500.01);
+    }
+
+    if ($oldversion < 2024071900.01) {
+        // Define table stored_progress to be created.
+        $table = new xmldb_table('stored_progress');
+
+        // Adding fields to table stored_progress.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('idnumber', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timestart', XMLDB_TYPE_INTEGER, '20', null, null, null, null);
+        $table->add_field('lastupdate', XMLDB_TYPE_INTEGER, '20', null, null, null, null);
+        $table->add_field('percentcompleted', XMLDB_TYPE_NUMBER, '5, 2', null, null, null, '0');
+        $table->add_field('message', XMLDB_TYPE_CHAR, '255', null, null, null, null);
+        $table->add_field('haserrored', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+
+        // Adding keys to table stored_progress.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        // Adding indexes to table stored_progress.
+        $table->add_index('uid_index', XMLDB_INDEX_NOTUNIQUE, ['idnumber']);
+
+        // Conditionally launch create table for stored_progress.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024071900.01);
+    }
+
+    if ($oldversion < 2024072600.01) {
+        // If tool_innodb is no longer present, remove it.
+        if (!file_exists($CFG->dirroot . '/admin/tool/innodb/version.php')) {
+            // Delete tool_innodb.
+            uninstall_plugin('tool', 'innodb');
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024072600.01);
+    }
+
+    if ($oldversion < 2024080500.00) {
+
+        // Fix missing default admin presets "sensible settings" (those that should be treated as sensitive).
+        $newsensiblesettings = [
+            'bigbluebuttonbn_shared_secret@@none',
+            'apikey@@tiny_premium',
+            'matrixaccesstoken@@communication_matrix',
+            'api_secret@@factor_sms',
+        ];
+
+        $sensiblesettings = get_config('adminpresets', 'sensiblesettings');
+        foreach ($newsensiblesettings as $newsensiblesetting) {
+            if (strpos($sensiblesettings, $newsensiblesetting) === false) {
+                $sensiblesettings .= ", {$newsensiblesetting}";
+            }
+        }
+
+        set_config('sensiblesettings', $sensiblesettings, 'adminpresets');
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024080500.00);
+    }
+
+    if ($oldversion < 2024082900.01) {
+        // If filter_tidy is no longer present, remove it.
+        if (!file_exists($CFG->dirroot . '/filter/tidy/version.php')) {
+            // Clean config.
+            uninstall_plugin('filter', 'tidy');
+        }
+
+        upgrade_main_savepoint(true, 2024082900.01);
+    }
+
+    if ($oldversion < 2024091000.01) {
+        // Define table ai_policy_register to be created.
+        $table = new xmldb_table('ai_policy_register');
+
+        // Adding fields to table ai_policy_register.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('contextid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timeaccepted', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table ai_policy_register.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('userid', XMLDB_KEY_FOREIGN_UNIQUE, ['userid'], 'user', ['id']);
+
+        // Conditionally launch create table for ai_policy_register.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table ai_action_generate_image to be created.
+        $table = new xmldb_table('ai_action_generate_image');
+
+        // Adding fields to table ai_action_generate_image.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('prompt', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('numberimages', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('quality', XMLDB_TYPE_CHAR, '21', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('aspectratio', XMLDB_TYPE_CHAR, '20', null, null, null, null);
+        $table->add_field('style', XMLDB_TYPE_CHAR, '20', null, null, null, null);
+        $table->add_field('sourceurl', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('revisedprompt', XMLDB_TYPE_TEXT, null, null, null, null, null);
+
+        // Adding keys to table ai_action_generate_image.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        // Conditionally launch create table for ai_action_generate_image.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table ai_action_register to be created.
+        $table = new xmldb_table('ai_action_register');
+
+        // Adding fields to table ai_action_register.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('actionname', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('actionid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('success', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('contextid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('provider', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('errorcode', XMLDB_TYPE_INTEGER, '4', null, null, null, null);
+        $table->add_field('errormessage', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecompleted', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+
+        // Adding keys to table ai_action_register.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('userid', XMLDB_KEY_FOREIGN, ['userid'], 'user', ['id']);
+
+        // Adding indexes to table ai_action_register.
+        $table->add_index('action', XMLDB_INDEX_UNIQUE, ['actionname', 'actionid']);
+        $table->add_index('provider', XMLDB_INDEX_NOTUNIQUE, ['actionname', 'provider']);
+
+        // Conditionally launch create table for ai_action_register.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table ai_action_generate_text to be created.
+        $table = new xmldb_table('ai_action_generate_text');
+
+        // Adding fields to table ai_action_generate_text.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('prompt', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('responseid', XMLDB_TYPE_CHAR, '128', null, null, null, null);
+        $table->add_field('fingerprint', XMLDB_TYPE_CHAR, '128', null, null, null, null);
+        $table->add_field('generatedcontent', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('finishreason', XMLDB_TYPE_CHAR, '128', null, null, null, null);
+        $table->add_field('prompttokens', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('completiontoken', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+
+        // Adding keys to table ai_action_generate_text.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        // Conditionally launch create table for ai_action_generate_text.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table ai_action_summarise_text to be created.
+        $table = new xmldb_table('ai_action_summarise_text');
+
+        // Adding fields to table ai_action_summarise_text.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('prompt', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('responseid', XMLDB_TYPE_CHAR, '128', null, null, null, null);
+        $table->add_field('fingerprint', XMLDB_TYPE_CHAR, '128', null, null, null, null);
+        $table->add_field('generatedcontent', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('finishreason', XMLDB_TYPE_CHAR, '128', null, null, null, null);
+        $table->add_field('prompttokens', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('completiontoken', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+
+        // Adding keys to table ai_action_summarise_text.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        // Conditionally launch create table for ai_action_summarise_text.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024091000.01);
+    }
+
+    if ($oldversion < 2024091700.01) {
+        // Convert the ai_action_register.success column to an integer, if necessary.
+        upgrade_change_binary_column_to_int('ai_action_register', 'success', XMLDB_NOTNULL, 'actionid');
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024091700.01);
+    }
+
+    if ($oldversion < 2024092000.01) {
+
+        // Define table sms_messages to be created.
+        $table = new xmldb_table('sms_messages');
+
+        // Adding fields to table sms_messages.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('recipientnumber', XMLDB_TYPE_CHAR, '30', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('content', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('component', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('messagetype', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('recipientuserid', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('issensitive', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('gatewayid', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('status', XMLDB_TYPE_CHAR, '100', null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table sms_messages.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('gateway', XMLDB_KEY_FOREIGN, ['gatewayid'], 'sms_gateways', ['id']);
+
+        // Conditionally launch create table for sms_messages.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table sms_gateways to be created.
+        $table = new xmldb_table('sms_gateways');
+
+        // Adding fields to table sms_gateways.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('name', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('gateway', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('enabled', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '1');
+        $table->add_field('config', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table sms_gateways.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        // Conditionally launch create table for sms_gateways.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024092000.01);
+    }
+
+    if ($oldversion < 2024092600.00) {
+        // If h5plib_v126 is no longer present, remove it.
+        if (!file_exists($CFG->dirroot . '/h5p/h5plib/v126/version.php')) {
+            // Clean config.
+            uninstall_plugin('h5plib', 'v126');
+        }
+
+        // If h5plib_v127 is present, set it as the default one.
+        if (file_exists($CFG->dirroot . '/h5p/h5plib/v127/version.php')) {
+            set_config('h5plibraryhandler', 'h5plib_v127');
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024092600.00);
+    }
+
+    if ($oldversion < 2024100100.02) {
+        upgrade_store_relative_url_sitehomepage();
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024100100.02);
+    }
+
+    // Automatically generated Moodle v4.5.0 release upgrade line.
+    // Put any upgrade step following this.
+
+    if ($oldversion < 2024110400.00) {
+
+        // Define field model to be added to ai_action_register.
+        $table = new xmldb_table('ai_action_register');
+        $field = new xmldb_field('model', XMLDB_TYPE_CHAR, '50', null, null, null, null, null);
+
+        // Conditionally launch add field model.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024110400.00);
+    }
+
+    if ($oldversion < 2024110800.02) {
+        // Changing type of field value on table user_preferences to text.
+        $table = new xmldb_table('user_preferences');
+        $field = new xmldb_field('value', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null, 'name');
+
+        // Launch change of type for field value.
+        $dbman->change_field_type($table, $field);
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024110800.02);
+    }
+
     return true;
 }

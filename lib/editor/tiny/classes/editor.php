@@ -142,7 +142,7 @@ class editor extends \texteditor {
      * @param array $options
      * @param null $fpoptions
      */
-    public function use_editor($elementid, array $options = null, $fpoptions = null) {
+    public function use_editor($elementid, ?array $options = null, $fpoptions = null) {
         global $PAGE;
 
         // Ensure that the default configuration is set.
@@ -178,6 +178,7 @@ class editor extends \texteditor {
             'currentLanguage' => current_language(),
 
             'branding' => property_exists($siteconfig, 'branding') ? !empty($siteconfig->branding) : true,
+            'extended_valid_elements' => $siteconfig->extended_valid_elements ?? 'script[*],p[*],i[*]',
 
             // Language options.
             'language' => [

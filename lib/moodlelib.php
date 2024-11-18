@@ -389,16 +389,8 @@ define ('BLOG_COURSE_LEVEL', 3);
 define ('BLOG_SITE_LEVEL', 4);
 define ('BLOG_GLOBAL_LEVEL', 5);
 
-
-// Tag constants.
-/**
- * To prevent problems with multibytes strings,Flag updating in nav not working on the review page. this should not exceed the
- * length of "varchar(255) / 3 (bytes / utf-8 character) = 85".
- * TODO: this is not correct, varchar(255) are 255 unicode chars ;-)
- *
- * @todo define(TAG_MAX_LENGTH) this is not correct, varchar(255) are 255 unicode chars ;-)
- */
-define('TAG_MAX_LENGTH', 50);
+/** The maximum length of a tag */
+define('TAG_MAX_LENGTH', 255);
 
 // Password policy constants.
 define ('PASSWORD_LOWER', 'abcdefghijklmnopqrstuvwxyz');
@@ -425,6 +417,8 @@ define('FEATURE_CONTROLS_GRADE_VISIBILITY', 'controlsgradevisbility');
 /** True if module supports plagiarism plugins */
 define('FEATURE_PLAGIARISM', 'plagiarism');
 
+/** True if module supports completion (true by default) */
+define('FEATURE_COMPLETION', 'completion_enabled');
 /** True if module has code to track whether somebody viewed it */
 define('FEATURE_COMPLETION_TRACKS_VIEWS', 'completion_tracks_views');
 /** True if module has custom completion rules */
@@ -500,6 +494,8 @@ define('MOD_PURPOSE_OTHER', 'other');
 */
 define('MOD_PURPOSE_INTERFACE', 'interface');
 
+/** True if module can be quickly created without filling a previous form. */
+define('FEATURE_QUICKCREATE', 'quickcreate');
 /**
  * Security token used for allowing access
  * from external application such as web services.
@@ -533,6 +529,10 @@ define('HOMEPAGE_USER', 2);
  * The home page should be the users my courses page
  */
 define('HOMEPAGE_MYCOURSES', 3);
+/**
+ * The home page is defined as a URL
+ */
+define('HOMEPAGE_URL', 4);
 
 /**
  * URL of the Moodle sites registration portal.
@@ -1185,6 +1185,7 @@ function purge_all_caches() {
  *
  * @param bool[] $options Specific parts of the cache to purge. Valid options are:
  *        'muc'    Purge MUC caches?
+ *        'courses' Purge all course caches, or specific course caches (CLI only)
  *        'theme'  Purge theme cache?
  *        'lang'   Purge language string cache?
  *        'js'     Purge javascript cache?
@@ -1200,8 +1201,7 @@ function purge_caches($options = []) {
     }
     if ($options['muc']) {
         cache_helper::purge_all();
-    }
-    if ($options['courses']) {
+    } else if ($options['courses']) {
         if ($options['courses'] === true) {
             $courseids = [];
         } else {
@@ -1262,6 +1262,9 @@ function purge_other_caches() {
     remove_dir($CFG->localcachedir, true);
     set_config('localcachedirpurged', time());
     make_localcache_directory('', true);
+
+    // Rewarm the bootstrap.php files so the siteid is always present after a purge.
+    initialise_local_config_cache();
     \core\task\manager::clear_static_caches();
 }
 
@@ -1487,11 +1490,7 @@ function set_user_preference($name, $value, $user = null) {
     } else if (is_array($value)) {
         throw new coding_exception('Invalid value in set_user_preference() call, arrays are not allowed');
     }
-    // Value column maximum length is 1333 characters.
     $value = (string)$value;
-    if (core_text::strlen($value) > 1333) {
-        throw new coding_exception('Invalid value in set_user_preference() call, value is is too long for the value column');
-    }
 
     if (is_null($user)) {
         $user = $USER;
@@ -2682,7 +2681,8 @@ function require_logout() {
             'other' => array('sessionid' => $sid),
         )
     );
-    if ($session = $DB->get_record('sessions', array('sid'=>$sid))) {
+    $session = \core\session\manager::get_session_by_sid($sid);
+    if (isset($session->id)) {
         $event->add_record_snapshot('sessions', $session);
     }
 
@@ -3668,7 +3668,7 @@ function delete_user(stdClass $user) {
     }
 
     // Force logout - may fail if file based sessions used, sorry.
-    \core\session\manager::kill_user_sessions($user->id);
+    \core\session\manager::destroy_user_sessions($user->id);
 
     // Generate username from email address, or a fake email.
     $delemail = !empty($user->email) ? $user->email : $user->username . '.' . $user->id . '@unknownemail.invalid';
@@ -4381,7 +4381,7 @@ function hash_internal_user_password(#[\SensitiveParameter] string $password, $f
  * It will remove Web Services user tokens too.
  *
  * @param stdClass $user User object (password property may be updated).
- * @param string $password Plain text password.
+ * @param string|null $password Plain text password.
  * @param bool $fasthash If true, use a low cost factor when generating the hash
  *                       This is much faster to generate but makes the hash
  *                       less secure. It is used when lots of hashes need to
@@ -4390,7 +4390,7 @@ function hash_internal_user_password(#[\SensitiveParameter] string $password, $f
  */
 function update_internal_user_password(
         stdClass $user,
-        #[\SensitiveParameter] string $password,
+        #[\SensitiveParameter] ?string $password,
         bool $fasthash = false
 ): bool {
     global $CFG, $DB;
@@ -4754,7 +4754,7 @@ function delete_course($courseorid, $showfeedback = true) {
  *             method returns false, some of the removals will probably have succeeded, and others
  *             failed, but you have no way of knowing which.
  */
-function remove_course_contents($courseid, $showfeedback = true, array $options = null) {
+function remove_course_contents($courseid, $showfeedback = true, ?array $options = null) {
     global $CFG, $DB, $OUTPUT;
 
     require_once($CFG->libdir.'/badgeslib.php');
@@ -5374,35 +5374,6 @@ function generate_email_processing_address($modid, $modargs) {
 
     $header = $CFG->mailprefix . substr(base64_encode(pack('C', $modid)), 0, 2).$modargs;
     return $header . substr(md5($header.get_site_identifier()), 0, 16).'@'.$CFG->maildomain;
-}
-
-/**
- * ?
- *
- * @todo Finish documenting this function
- *
- * @param string $modargs
- * @param string $body Currently unused
- */
-function moodle_process_email($modargs, $body) {
-    global $DB;
-
-    // The first char should be an unencoded letter. We'll take this as an action.
-    switch ($modargs[0]) {
-        case 'B': { // Bounce.
-            list(, $userid) = unpack('V', base64_decode(substr($modargs, 1, 8)));
-            if ($user = $DB->get_record("user", array('id' => $userid), "id,email")) {
-                // Check the half md5 of their email.
-                $md5check = substr(md5($user->email), 0, 16);
-                if ($md5check == substr($modargs, -16)) {
-                    set_bounce_count($user);
-                }
-                // Else maybe they've already changed it?
-            }
-        }
-        break;
-        // Maybe more later?
-    }
 }
 
 // CORRESPONDENCE.
@@ -6073,7 +6044,10 @@ function setnew_password_and_mail($user, $fasthash = false) {
     update_internal_user_password($user, $newpassword, $fasthash);
 
     $a = new stdClass();
-    $a->firstname   = fullname($user, true);
+    $placeholders = \core_user::get_name_placeholders($user);
+    foreach ($placeholders as $field => $value) {
+        $a->{$field} = $value;
+    }
     $a->sitename    = format_string($site->fullname);
     $a->username    = $user->username;
     $a->newpassword = $newpassword;
@@ -6087,49 +6061,6 @@ function setnew_password_and_mail($user, $fasthash = false) {
     // Directly email rather than using the messaging system to ensure its not routed to a popup or jabber.
     return email_to_user($user, $supportuser, $subject, $message);
 
-}
-
-/**
- * Resets specified user's password and send the new password to the user via email.
- *
- * @param stdClass $user A {@link $USER} object
- * @return bool Returns true if mail was sent OK and false if there was an error.
- */
-function reset_password_and_mail($user) {
-    global $CFG;
-
-    $site  = get_site();
-    $supportuser = core_user::get_support_user();
-
-    $userauth = get_auth_plugin($user->auth);
-    if (!$userauth->can_reset_password() or !is_enabled_auth($user->auth)) {
-        trigger_error("Attempt to reset user password for user $user->username with Auth $user->auth.");
-        return false;
-    }
-
-    $newpassword = generate_password();
-
-    if (!$userauth->user_update_password($user, $newpassword)) {
-        throw new \moodle_exception("cannotsetpassword");
-    }
-
-    $a = new stdClass();
-    $a->firstname   = $user->firstname;
-    $a->lastname    = $user->lastname;
-    $a->sitename    = format_string($site->fullname);
-    $a->username    = $user->username;
-    $a->newpassword = $newpassword;
-    $a->link        = $CFG->wwwroot .'/login/change_password.php';
-    $a->signoff     = generate_email_signoff();
-
-    $message = get_string('newpasswordtext', '', $a);
-
-    $subject  = format_string($site->fullname) .': '. get_string('changedpassword');
-
-    unset_user_preference('create_password', $user); // Prevent cron from generating the password.
-
-    // Directly email rather than using the messaging system to ensure its not routed to a popup or jabber.
-    return email_to_user($user, $supportuser, $subject, $message);
 }
 
 /**
@@ -6148,6 +6079,11 @@ function send_confirmation_email($user, $confirmationurl = null) {
     $data = new stdClass();
     $data->sitename  = format_string($site->fullname);
     $data->admin     = generate_email_signoff();
+    // Add user name fields to $data based on $user.
+    $placeholders = \core_user::get_name_placeholders($user);
+    foreach ($placeholders as $field => $value) {
+        $data->{$field} = $value;
+    }
 
     $subject = get_string('emailconfirmationsubject', '', format_string($site->fullname));
 
@@ -6193,8 +6129,10 @@ function send_password_change_confirmation_email($user, $resetrecord) {
     $pwresetmins = isset($CFG->pwresettime) ? floor($CFG->pwresettime / MINSECS) : 30;
 
     $data = new stdClass();
-    $data->firstname = $user->firstname;
-    $data->lastname  = $user->lastname;
+    $placeholders = \core_user::get_name_placeholders($user);
+    foreach ($placeholders as $field => $value) {
+        $data->{$field} = $value;
+    }
     $data->username  = $user->username;
     $data->sitename  = format_string($site->fullname);
     $data->link      = $CFG->wwwroot .'/login/forgot_password.php?token='. $resetrecord->token;
@@ -6220,8 +6158,10 @@ function send_password_change_info($user) {
     $supportuser = core_user::get_support_user();
 
     $data = new stdClass();
-    $data->firstname = $user->firstname;
-    $data->lastname  = $user->lastname;
+    $placeholders = \core_user::get_name_placeholders($user);
+    foreach ($placeholders as $field => $value) {
+        $data->{$field} = $value;
+    }
     $data->username  = $user->username;
     $data->sitename  = format_string($site->fullname);
     $data->admin     = generate_email_signoff();
@@ -7268,11 +7208,12 @@ function get_plugins_with_function($function, $file = 'lib.php', $include = true
         foreach ($pluginfunctions as $plugintype => $plugins) {
             foreach ($plugins as $plugin => $unusedfunction) {
                 $component = $plugintype . '_' . $plugin;
-                if ($hooks = di::get(hook\manager::class)->get_hooks_deprecating_plugin_callback($plugincallback)) {
-                    if (di::get(hook\manager::class)->is_deprecating_hook_present($component, $plugincallback)) {
+                $hookmanager = di::get(hook\manager::class);
+                if ($hooks = $hookmanager->get_hooks_deprecating_plugin_callback($plugincallback)) {
+                    if ($hookmanager->is_deprecating_hook_present($component, $plugincallback)) {
                         // Ignore the old callback, it is there only for older Moodle versions.
                         unset($pluginfunctions[$plugintype][$plugin]);
-                    } else {
+                    } else if ($hookmanager->warn_on_unmigrated_legacy_hooks()) {
                         $hookmessage = count($hooks) == 1 ? reset($hooks) : 'one of  ' . implode(', ', $hooks);
                         debugging(
                             "Callback $plugincallback in $component component should be migrated to new " .
@@ -7513,7 +7454,7 @@ function component_callback($component, $function, array $params = array(), $def
                     // Do not call the old lib.php callback,
                     // it is there for compatibility with older Moodle versions only.
                     return null;
-                } else {
+                } else if ($hookmanager->warn_on_unmigrated_legacy_hooks()) {
                     $hookmessage = count($hooks) == 1 ? reset($hooks) : 'one of  ' . implode(', ', $hooks);
                     debugging(
                         "Callback $function in $component component should be migrated to new hook callback for $hookmessage",
@@ -7615,7 +7556,7 @@ function component_class_callback($classname, $methodname, array $params, $defau
                 // Do not call the old class callback,
                 // it is there for compatibility with older Moodle versions only.
                 return null;
-            } else {
+            } else if ($hookmanager->warn_on_unmigrated_legacy_hooks()) {
                 $hookmessage = count($hooks) == 1 ? reset($hooks) : 'one of  ' . implode(', ', $hooks);
                 debugging("Callback $callback in $component component should be migrated to new hook callback for $hookmessage",
                         DEBUG_DEVELOPER);
@@ -9948,12 +9889,16 @@ function get_home_page() {
         } else if ($CFG->defaulthomepage == HOMEPAGE_MYCOURSES && !isguestuser()) {
             return HOMEPAGE_MYCOURSES;
         } else if ($CFG->defaulthomepage == HOMEPAGE_USER && !isguestuser()) {
-            $userhomepage = (int) get_user_preferences('user_home_page_preference', $defaultpage);
+            $userhomepage = get_user_preferences('user_home_page_preference', $defaultpage);
             if (empty($CFG->enabledashboard) && $userhomepage == HOMEPAGE_MY) {
                 // If the user was using the dashboard but it's disabled, return the default home page.
                 $userhomepage = $defaultpage;
+            } else if (get_default_home_page_url()) {
+                return HOMEPAGE_URL;
             }
-            return $userhomepage;
+            return (int) $userhomepage;
+        } else if (get_default_home_page_url()) {
+            return HOMEPAGE_URL;
         }
     }
     return HOMEPAGE_SITE;
@@ -9969,6 +9914,33 @@ function get_default_home_page(): int {
     global $CFG;
 
     return (!isset($CFG->enabledashboard) || $CFG->enabledashboard) ? HOMEPAGE_MY : HOMEPAGE_MYCOURSES;
+}
+
+/**
+ * Get the default home page as a URL where it has been configured as one via site configuration or user preference
+ *
+ * It is assumed that callers have already checked that {@see get_home_page} returns {@see HOMEPAGE_URL} prior to
+ * calling this method
+ *
+ * @return \core\url|null
+ */
+function get_default_home_page_url(): ?\core\url {
+    global $CFG;
+
+    if (substr((string)$CFG->defaulthomepage, 0, 1) === '/' &&
+            ($defaulthomepage = clean_param($CFG->wwwroot . $CFG->defaulthomepage, PARAM_LOCALURL))) {
+        return new \core\url($defaulthomepage);
+    }
+
+    if ($CFG->defaulthomepage == HOMEPAGE_USER) {
+        $userhomepage = get_user_preferences('user_home_page_preference');
+        if (substr((string)$userhomepage, 0, 1) === '/' &&
+                ($userhomepage = clean_param($CFG->wwwroot . $userhomepage, PARAM_LOCALURL))) {
+            return new \core\url($userhomepage);
+        }
+    }
+
+    return null;
 }
 
 /**

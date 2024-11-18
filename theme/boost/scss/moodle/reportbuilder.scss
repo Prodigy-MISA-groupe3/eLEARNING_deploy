@@ -26,6 +26,11 @@
     }
     .action-menu .menubar {
         justify-content: end;
+        .btn.btn-icon {
+            height: $icon-medium-height;
+            width: $icon-medium-width;
+            @include border-radius();
+        }
     }
 }
 
@@ -315,7 +320,6 @@ $rb-sortable-list-drag-color: lighten($primary, 40%);
     .toggle-card-button {
         i.toggle-card-icon {
             color: $gray-600;
-            font-size: 1.5em;
             font-weight: 700;
         }
         // Toggle icons using standard bootstrap collapse.

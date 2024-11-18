@@ -155,7 +155,7 @@ class enrol_manual_plugin extends enrol_plugin {
      * @param array instance fields
      * @return int id of new instance, null if can not be created
      */
-    public function add_instance($course, array $fields = NULL) {
+    public function add_instance($course, ?array $fields = NULL) {
         global $DB;
 
         if ($DB->record_exists('enrol', array('courseid'=>$course->id, 'enrol'=>'manual'))) {
@@ -702,7 +702,7 @@ class enrol_manual_plugin extends enrol_plugin {
 
         // This method is used when configuring the enrolment method, and when only updating the welcome message.
         // The 'expirynotify' key won't be set when updating the welcome message.
-        if (isset($data['expirynotify']) && $data['expirynotify'] > 0 && $data['expirythreshold'] < 86400) {
+        if (isset($data['expirynotify']) && $data['expirynotify'] > 0 && $data['expirythreshold'] < DAYSECS) {
             $errors['expirythreshold'] = get_string('errorthresholdlow', 'core_enrol');
         }
 

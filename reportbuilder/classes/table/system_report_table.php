@@ -259,7 +259,10 @@ class system_report_table extends base_report_table {
         global $OUTPUT;
 
         $menu = new action_menu();
-        $menu->set_menu_trigger($OUTPUT->pix_icon('a/setting', get_string('actions', 'core_reportbuilder')));
+        $menu->set_menu_trigger(
+            $OUTPUT->pix_icon('i/menu', get_string('actions', 'core_reportbuilder')),
+            'btn btn-icon d-flex align-items-center justify-content-center no-caret',
+        );
 
         $actions = array_filter($this->report->get_actions(), function($action) use ($row) {
             // Only return dividers and action items who can be displayed for current users.
@@ -315,5 +318,19 @@ class system_report_table extends base_report_table {
         }
 
         return '';
+    }
+
+    /**
+     * Check if the user has the capability to access this table.
+     *
+     * @return bool Return true if capability check passed.
+     */
+    public function has_capability(): bool {
+        try {
+            $this->report->require_can_view();
+            return true;
+        } catch (\core_reportbuilder\exception\report_access_exception $e) {
+            return false;
+        }
     }
 }

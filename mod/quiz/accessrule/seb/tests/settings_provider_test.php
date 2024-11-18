@@ -622,7 +622,7 @@ class settings_provider_test extends \advanced_testcase {
     /**
      * Test SEB usage options.
      *
-     * @param string $settingcapability Setting capability to check manual option against.
+     * @param string $settingcapability Setting capability to check options against.
      *
      * @dataProvider settings_capability_data_provider
      */
@@ -656,14 +656,32 @@ class settings_provider_test extends \advanced_testcase {
 
         $options = settings_provider::get_requiresafeexambrowser_options($this->context);
 
-        $this->assertCount(2, $options);
+        $this->assertCount(1, $options);
         $this->assertFalse(array_key_exists(settings_provider::USE_SEB_CONFIG_MANUALLY, $options));
         $this->assertFalse(array_key_exists(settings_provider::USE_SEB_TEMPLATE, $options));
         $this->assertFalse(array_key_exists(settings_provider::USE_SEB_UPLOAD_CONFIG, $options));
-        $this->assertTrue(array_key_exists(settings_provider::USE_SEB_CLIENT_CONFIG, $options));
+        $this->assertFalse(array_key_exists(settings_provider::USE_SEB_CLIENT_CONFIG, $options));
         $this->assertTrue(array_key_exists(settings_provider::USE_SEB_NO, $options));
 
         assign_capability($settingcapability, CAP_ALLOW, $this->roleid, $this->context->id);
+        $options = settings_provider::get_requiresafeexambrowser_options($this->context);
+        $this->assertCount(1, $options);
+        $this->assertFalse(array_key_exists(settings_provider::USE_SEB_CONFIG_MANUALLY, $options));
+        $this->assertFalse(array_key_exists(settings_provider::USE_SEB_TEMPLATE, $options));
+        $this->assertFalse(array_key_exists(settings_provider::USE_SEB_UPLOAD_CONFIG, $options));
+        $this->assertFalse(array_key_exists(settings_provider::USE_SEB_CLIENT_CONFIG, $options));
+        $this->assertTrue(array_key_exists(settings_provider::USE_SEB_NO, $options));
+
+        assign_capability('quizaccess/seb:manage_seb_configuremanually', CAP_ALLOW, $this->roleid, $this->context->id);
+        $options = settings_provider::get_requiresafeexambrowser_options($this->context);
+        $this->assertCount(2, $options);
+        $this->assertTrue(array_key_exists(settings_provider::USE_SEB_CONFIG_MANUALLY, $options));
+        $this->assertFalse(array_key_exists(settings_provider::USE_SEB_TEMPLATE, $options));
+        $this->assertFalse(array_key_exists(settings_provider::USE_SEB_UPLOAD_CONFIG, $options));
+        $this->assertFalse(array_key_exists(settings_provider::USE_SEB_CLIENT_CONFIG, $options));
+        $this->assertTrue(array_key_exists(settings_provider::USE_SEB_NO, $options));
+
+        assign_capability('quizaccess/seb:manage_seb_usesebclientconfig', CAP_ALLOW, $this->roleid, $this->context->id);
         $options = settings_provider::get_requiresafeexambrowser_options($this->context);
         $this->assertCount(3, $options);
         $this->assertTrue(array_key_exists(settings_provider::USE_SEB_CONFIG_MANUALLY, $options));
@@ -911,7 +929,7 @@ class settings_provider_test extends \advanced_testcase {
         $user = $this->getDataGenerator()->create_user();
         $this->setUser($user);
 
-        $xml = file_get_contents(__DIR__ . '/fixtures/unencrypted.seb');
+        $xml = file_get_contents(self::get_fixture_path(__NAMESPACE__, 'unencrypted.seb'));
         $itemid = $this->create_test_draftarea_file($xml);
         $file = settings_provider::get_current_user_draft_file($itemid);
         $content = $file->get_content();
@@ -929,7 +947,7 @@ class settings_provider_test extends \advanced_testcase {
         $this->context = \context_module::instance($this->quiz->cmid);
         $this->set_up_user_and_role();
 
-        $xml = file_get_contents(__DIR__ . '/fixtures/unencrypted.seb');
+        $xml = file_get_contents(self::get_fixture_path(__NAMESPACE__, 'unencrypted.seb'));
 
         $draftitemid = $this->create_test_draftarea_file($xml);
 
@@ -951,7 +969,7 @@ class settings_provider_test extends \advanced_testcase {
         $this->context = \context_module::instance($this->quiz->cmid);
         $this->set_up_user_and_role();
 
-        $xml = file_get_contents(__DIR__ . '/fixtures/unencrypted.seb');
+        $xml = file_get_contents(self::get_fixture_path(__NAMESPACE__, 'unencrypted.seb'));
         $draftitemid = $this->create_test_draftarea_file($xml);
 
         settings_provider::save_filemanager_sebconfigfile_draftarea($draftitemid, $this->quiz->cmid);
@@ -980,7 +998,7 @@ class settings_provider_test extends \advanced_testcase {
 
         $this->set_up_user_and_role();
 
-        $xml = file_get_contents(__DIR__ . '/fixtures/unencrypted.seb');
+        $xml = file_get_contents(self::get_fixture_path(__NAMESPACE__, 'unencrypted.seb'));
         $draftitemid = $this->create_test_draftarea_file($xml);
 
         $fs = get_file_storage();
@@ -1134,6 +1152,9 @@ class settings_provider_test extends \advanced_testcase {
 
         $this->assertFalse(settings_provider::can_configure_manually($this->context));
 
+        assign_capability('quizaccess/seb:manage_seb_configuremanually', CAP_ALLOW, $this->roleid, $this->context->id);
+        $this->assertFalse(settings_provider::can_configure_manually($this->context));
+
         assign_capability($settingcapability, CAP_ALLOW, $this->roleid, $this->context->id);
         $this->assertTrue(settings_provider::can_configure_manually($this->context));
     }
@@ -1194,7 +1215,7 @@ class settings_provider_test extends \advanced_testcase {
         $this->context = \context_module::instance($this->quiz->cmid);
 
         // Save file.
-        $xml = file_get_contents(__DIR__ . '/fixtures/unencrypted.seb');
+        $xml = file_get_contents(self::get_fixture_path(__NAMESPACE__, 'unencrypted.seb'));
         $draftitemid = $this->create_test_draftarea_file($xml);
         settings_provider::save_filemanager_sebconfigfile_draftarea($draftitemid, $this->quiz->cmid);
         $settings = seb_quiz_settings::get_record(['quizid' => $this->quiz->id]);
@@ -1227,6 +1248,11 @@ class settings_provider_test extends \advanced_testcase {
         $this->assertFalse(settings_provider::is_conflicting_permissions($this->context));
 
         $this->set_up_user_and_role();
+
+        $this->assertTrue(settings_provider::is_conflicting_permissions($this->context));
+
+        assign_capability('quizaccess/seb:manage_seb_configuremanually', CAP_ALLOW, $this->roleid, $this->context->id);
+        $this->assertTrue(settings_provider::is_conflicting_permissions($this->context));
 
         assign_capability($settingcapability, CAP_ALLOW, $this->roleid, $this->context->id);
         $this->assertFalse(settings_provider::is_conflicting_permissions($this->context));

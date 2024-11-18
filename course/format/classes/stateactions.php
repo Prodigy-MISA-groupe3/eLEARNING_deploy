@@ -48,6 +48,7 @@ class stateactions {
      * @param int[] $ids the list of affected course module ids
      * @param int $targetsectionid optional target section id
      * @param int $targetcmid optional target cm id
+     * @throws moodle_exception
      */
     public function cm_move(
         stateupdates $updates,
@@ -85,6 +86,9 @@ class stateactions {
             $cm = $modinfo->get_cm($cmid);
             $currentsectionid = $cm->section;
             $targetsection = $modinfo->get_section_info_by_id($targetsectionid, MUST_EXIST);
+            if ($targetsection->is_delegated() && $cm->get_delegated_section_info()) {
+                throw new moodle_exception('subsectionmoveerror', 'core');
+            }
             $beforecm = (!empty($beforecmdid)) ? $modinfo->get_cm($beforecmdid) : null;
             if ($beforecm === null || $beforecm->id != $cmid) {
                 moveto_module($cm, $targetsection, $beforecm);
@@ -521,7 +525,7 @@ class stateactions {
             $course,
             $ids,
             __FUNCTION__,
-            ['moodle/course:manageactivities', 'moodle/course:activityvisibility']
+            ['moodle/course:activityvisibility']
         );
 
         $format = course_get_format($course->id);
@@ -542,8 +546,18 @@ class stateactions {
         course_modinfo::purge_course_modules_cache($course->id, $ids);
         rebuild_course_cache($course->id, false, true);
 
+        $delegatedsections = [];
         foreach ($cms as $cm) {
             $updates->add_cm_put($cm->id);
+            if (!$delegatedsection = $cm->get_delegated_section_info()) {
+                continue;
+            }
+            if (!in_array($delegatedsection->id, $delegatedsections)) {
+                $delegatedsections[] = $delegatedsection->id;
+            }
+        }
+        foreach ($delegatedsections as $sectionid => $section) {
+            $updates->add_section_put($sectionid);
         }
     }
 
@@ -567,7 +581,8 @@ class stateactions {
             $course,
             $ids,
             __FUNCTION__,
-            ['moodle/course:manageactivities', 'moodle/backup:backuptargetimport', 'moodle/restore:restoretargetimport']
+            ['moodle/backup:backuptargetimport', 'moodle/restore:restoretargetimport'],
+            false
         );
 
         $modinfo = get_fast_modinfo($course);
@@ -1131,10 +1146,17 @@ class stateactions {
      * @param stdClass $course The course where given $cmids belong.
      * @param array $cmids List of course module ids to validate.
      * @param string $info additional information in case of error.
-     * @param array $capabilities optional capabilities checks per each cm context.
+     * @param array $capabilities optional capabilities checks to require.
+     * @param bool $usemodcontext whether to use each module context, or the course context
      * @throws moodle_exception if any id is not valid
      */
-    protected function validate_cms(stdClass $course, array $cmids, ?string $info = null, array $capabilities = []): void {
+    protected function validate_cms(
+        stdClass $course,
+        array $cmids,
+        ?string $info = null,
+        array $capabilities = [],
+        bool $usemodcontext = true,
+    ): void {
 
         if (empty($cmids)) {
             throw new moodle_exception('emptycmids', 'core', null, $info);
@@ -1145,11 +1167,48 @@ class stateactions {
         if (count($cmids) != count($intersect)) {
             throw new moodle_exception('unexistingcmid', 'core', null, $info);
         }
+
         if (!empty($capabilities)) {
-            foreach ($cmids as $cmid) {
-                $modcontext = context_module::instance($cmid);
-                require_all_capabilities($capabilities, $modcontext);
+            if ($usemodcontext) {
+                foreach ($cmids as $cmid) {
+                    $modcontext = context_module::instance($cmid);
+                    require_all_capabilities($capabilities, $modcontext);
+                }
+            } else {
+                $coursecontext = context_course::instance($course->id);
+                require_all_capabilities($capabilities, $coursecontext);
             }
         }
+    }
+
+    /**
+     * Create a course module.
+     *
+     * @param stateupdates $updates the affected course elements track
+     * @param stdClass $course the course object
+     * @param string $modname the module name
+     * @param int $targetsectionnum target section number
+     * @param int|null $targetcmid optional target cm id
+     */
+    public function create_module(
+        stateupdates $updates,
+        stdClass $course,
+        string $modname,
+        int $targetsectionnum,
+        ?int $targetcmid = null
+    ): void {
+        global $CFG;
+        require_once($CFG->dirroot . '/course/modlib.php');
+
+        $coursecontext = context_course::instance($course->id);
+        require_capability('moodle/course:update', $coursecontext);
+
+        // Method "can_add_moduleinfo" called in "prepare_new_moduleinfo_data" will handle the capability checks.
+        [, , , , $moduleinfo] = prepare_new_moduleinfo_data($course, $modname, $targetsectionnum);
+        $moduleinfo->beforemod = $targetcmid;
+        create_module((object) $moduleinfo);
+
+        // Adding module affects section structure, and if the module has a delegated section even the course structure.
+        $this->course_state($updates, $course);
     }
 }

@@ -879,22 +879,15 @@ class moodle_page {
     /**
      * Returns the secondary navigation object
      *
-     * @todo MDL-74939 Remove support for old 'local\views\secondary' class location
      * @return secondary
      */
     protected function magic_get_secondarynav() {
         if ($this->_secondarynav === null) {
             $class = 'core\navigation\views\secondary';
-            // Try and load a custom class first.
+
+            // Check whether activity defines its own secondary navigation.
             if (class_exists("mod_{$this->activityname}\\navigation\\views\\secondary")) {
                 $class = "mod_{$this->activityname}\\navigation\\views\\secondary";
-            } else if (class_exists("mod_{$this->activityname}\\local\\views\\secondary")) {
-                // For backwards compatibility, support the old location for this class (it was in a
-                // 'local' namespace which shouldn't be used for core APIs).
-                debugging("The class mod_{$this->activityname}}\\local\\views\\secondary uses a deprecated " .
-                        "namespace. Please move it to mod_{$this->activityname}\\navigation\\views\\secondary.",
-                        DEBUG_DEVELOPER);
-                $class = "mod_{$this->activityname}\\local\\views\\secondary";
             }
 
             $this->_secondarynav = new $class($this);
@@ -1104,6 +1097,18 @@ class moodle_page {
         if ($this->subpage) {
             $summary .= 'Sub-page ' . $this->subpage .  '. ';
         }
+
+        // Display deprecated icons in the console (if any).
+        $summary .= <<< EOF
+            <script type="text/javascript">
+            //<![CDATA[
+            document.querySelectorAll('.icon.deprecated').forEach((icon) => {
+                window.console.warn("Deprecated icon found: " + icon.className);
+            });
+            //]]>
+            </script>
+        EOF;
+
         return $summary;
     }
 
@@ -1491,7 +1496,7 @@ class moodle_page {
      * @param array $params parameters to add to the URL
      * @throws coding_exception
      */
-    public function set_url($url, array $params = null) {
+    public function set_url($url, ?array $params = null) {
         global $CFG;
 
         if (is_string($url) && strpos($url, 'http') !== 0) {

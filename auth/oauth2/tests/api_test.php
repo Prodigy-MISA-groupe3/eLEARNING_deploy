@@ -22,6 +22,8 @@ namespace auth_oauth2;
  * @package     auth_oauth2
  * @copyright   2017 Damyon Wiese
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ *
+ * @covers \auth_oauth2\api
  */
 class api_test extends \advanced_testcase {
 
@@ -137,6 +139,7 @@ class api_test extends \advanced_testcase {
         $issuer = \core\oauth2\api::create_standard_issuer('google');
 
         $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
 
         $info = [];
         $info['username'] = 'banana';
@@ -167,6 +170,30 @@ class api_test extends \advanced_testcase {
         $match = \auth_oauth2\api::match_username_to_user('apple', $issuer);
 
         $this->assertEquals($newuser->id, $match->get('userid'));
+    }
+
+    /**
+     * Test that we cannot deleted a linked login for another user
+     */
+    public function test_delete_linked_login_other_user(): void {
+        $this->resetAfterTest();
+
+        $this->setAdminUser();
+        $issuer = \core\oauth2\api::create_standard_issuer('google');
+
+        $user = $this->getDataGenerator()->create_user();
+
+        api::link_login([
+            'username' => 'banana',
+            'email' => 'banana@example.com',
+        ], $issuer, $user->id);
+
+        /** @var linked_login $linkedlogin */
+        $linkedlogin = api::get_linked_logins($user->id)[0];
+
+        // We are logged in as a different user, so cannot delete this.
+        $this->expectException(\dml_missing_record_exception::class);
+        api::delete_linked_login($linkedlogin->get('id'));
     }
 
     /**
@@ -226,5 +253,40 @@ class api_test extends \advanced_testcase {
 
         // Explicitly test the user is not yet confirmed.
         $this->assertEquals(0, $userdata->confirmed);
+    }
+
+    /**
+     * Test case for checking the email greetings in OAuth2 confirmation emails.
+     */
+    public function test_email_greetings(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $issuer = \core\oauth2\api::create_standard_issuer('microsoft');
+
+        $userinfo = [];
+        $userinfo['username'] = 'apple';
+        $userinfo['email'] = 'apple@example.com';
+        $userinfo['firstname'] = 'Apple';
+        $userinfo['lastname'] = 'Fruit';
+        $sink = $this->redirectEmails(); // Make sure we are redirecting emails.
+        \auth_oauth2\api::send_confirm_account_email($userinfo, $issuer);
+        $result = $sink->get_messages();
+        $sink->close();
+        // Test greetings.
+        $this->assertStringContainsString('Hi ' . $userinfo['firstname'], quoted_printable_decode($result[0]->body));
+
+        $userinfo = [];
+        $userinfo['username'] = 'banana';
+        $userinfo['email'] = 'banana@example.com';
+        $userinfo['firstname'] = 'Banana';
+        $userinfo['lastname'] = 'Fruit';
+        $user = $this->getDataGenerator()->create_user();
+        $sink = $this->redirectEmails(); // Make sure we are redirecting emails.
+        \auth_oauth2\api::send_confirm_link_login_email($userinfo, $issuer, $user->id);
+        $result = $sink->get_messages();
+        $sink->close();
+        // Test greetings.
+        $this->assertStringContainsString('Hi ' . $user->firstname, quoted_printable_decode($result[0]->body));
     }
 }

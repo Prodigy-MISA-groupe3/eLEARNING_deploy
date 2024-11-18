@@ -76,7 +76,7 @@ class backup_course_task extends backup_task {
         $this->add_step(new backup_course_structure_step('course_info', 'course.xml'));
 
         // Generate the enrolment file (conditionally, prevent it in any IMPORT/HUB operation)
-        if ($this->plan->get_mode() != backup::MODE_IMPORT && $this->plan->get_mode() != backup::MODE_HUB) {
+        if ($this->plan->get_mode() != backup::MODE_IMPORT) {
             $this->add_step(new backup_enrolments_structure_step('course_enrolments', 'enrolments.xml'));
         }
 
@@ -165,7 +165,7 @@ class backup_course_task extends backup_task {
         // A few other key course links.
         $content = self::encode_links_helper($content, 'GRADEINDEXBYID',       '/grade/index.php?id=');
         $content = self::encode_links_helper($content, 'GRADEREPORTINDEXBYID', '/grade/report/index.php?id=');
-        $content = self::encode_links_helper($content, 'BADGESVIEWBYID',       '/badges/view.php?type=2&id=');
+        $content = self::encode_links_helper($content, 'BADGESVIEWBYID',       '/badges/index.php?type=2&id=');
         $content = self::encode_links_helper($content, 'USERINDEXVIEWBYID',    '/user/index.php?id=');
         $content = self::encode_links_helper($content, 'PLUGINFILEBYCONTEXT',  '/pluginfile.php/');
         $content = self::encode_links_helper($content, 'PLUGINFILEBYCONTEXTURLENCODED', '/pluginfile.php/', true);

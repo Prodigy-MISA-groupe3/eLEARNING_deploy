@@ -16,8 +16,8 @@
 
 namespace cachestore_file;
 
-use cache_definition;
-use cache_store;
+use core_cache\definition;
+use core_cache\store;
 use cachestore_file;
 
 defined('MOODLE_INTERNAL') || die();
@@ -45,6 +45,45 @@ class store_test extends \cachestore_tests {
     }
 
     /**
+     * Provider for set/get tests with all combinations of serializer.
+     *
+     * @return array
+     */
+    public static function getset_serialization_test_provider(): array {
+        $data = [
+            [
+                'PHP serializer',
+                \cachestore_file::SERIALIZER_PHP,
+            ],
+        ];
+        if (function_exists('igbinary_serialize')) {
+            $data[] = [
+                'Igbinary serializer',
+                \cachestore_file::SERIALIZER_IGBINARY,
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Test get and set function correctly with all combinations of serializer.
+     *
+     * @dataProvider getset_serialization_test_provider
+     * @param string $name
+     * @param string $serializer
+     */
+    public function test_getset_serialization(string $name, string $serializer): void {
+        $definition = definition::load_adhoc(store::MODE_APPLICATION, 'cachestore_file', 'phpunit_test');
+        $store = new \cachestore_file('Test', ['serializer' => $serializer]);
+        $store->initialise($definition);
+        $originalvalue = 'value12345';
+        $store->set('key', $originalvalue);
+        $unserializedvalue = $store->get('key');
+        self::assertSame($originalvalue, $unserializedvalue, "Invalid serialisation/unserialisation for: {$name}");
+    }
+
+    /**
      * Testing cachestore_file::get with prescan enabled and with
      * deleting the cache between the prescan and the call to get.
      *
@@ -54,7 +93,7 @@ class store_test extends \cachestore_tests {
     public function test_cache_get_with_prescan_and_purge(): void {
         global $CFG;
 
-        $definition = cache_definition::load_adhoc(cache_store::MODE_REQUEST, 'cachestore_file', 'phpunit_test');
+        $definition = definition::load_adhoc(store::MODE_REQUEST, 'cachestore_file', 'phpunit_test');
         $name = 'File test';
 
         $path = make_cache_directory('cachestore_file_test');
@@ -78,7 +117,7 @@ class store_test extends \cachestore_tests {
      * Tests the get_last_read byte count.
      */
     public function test_get_last_io_bytes(): void {
-        $definition = cache_definition::load_adhoc(cache_store::MODE_REQUEST, 'cachestore_file', 'phpunit_test');
+        $definition = definition::load_adhoc(store::MODE_REQUEST, 'cachestore_file', 'phpunit_test');
         $store = new \cachestore_file('Test');
         $store->initialise($definition);
 

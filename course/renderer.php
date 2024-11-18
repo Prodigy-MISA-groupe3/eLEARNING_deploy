@@ -141,10 +141,9 @@ class core_course_renderer extends plugin_renderer_base {
      * Build the HTML for the module chooser javascript popup.
      *
      * @param int $courseid The course id to fetch modules for.
-     * @param int|null $sectionnum The section number to fetch modules for.
      * @return string
      */
-    public function course_activitychooser($courseid, ?int $sectionnum = null) {
+    public function course_activitychooser($courseid) {
 
         if (!$this->page->requires->should_create_one_time_item_now('core_course_modchooser')) {
             return '';
@@ -154,7 +153,7 @@ class core_course_renderer extends plugin_renderer_base {
         $chooserconfig = (object) [
             'tabmode' => get_config('core', 'activitychoosertabmode'),
         ];
-        $this->page->requires->js_call_amd('core_course/activitychooser', 'init', [$courseid, $chooserconfig, $sectionnum]);
+        $this->page->requires->js_call_amd('core_course/activitychooser', 'init', [$courseid, $chooserconfig]);
 
         return '';
     }
@@ -198,7 +197,7 @@ class core_course_renderer extends plugin_renderer_base {
     /**
      * @deprecated since 4.0 - please do not use this function any more.
      */
-    public function course_section_cm_edit_actions($actions, cm_info $mod = null, $displayoptions = array()) {
+    public function course_section_cm_edit_actions($actions, ?cm_info $mod = null, $displayoptions = array()) {
 
         throw new coding_exception(
             'course_section_cm_edit_actions can not be used any more. Please, use ' .
@@ -225,16 +224,20 @@ class core_course_renderer extends plugin_renderer_base {
             return '';
         }
 
-        $data = [
-            'sectionnum' => $section,
-            'sectionreturn' => $sectionreturn
-        ];
-        $ajaxcontrol = $this->render_from_template('course/activitychooserbutton', $data);
+        $sectioninfo = get_fast_modinfo($course)->get_section_info($section);
+
+        $activitychooserbutton = new \core_course\output\activitychooserbutton($sectioninfo, null, $sectionreturn);
 
         // Load the JS for the modal.
-        $this->course_activitychooser($course->id, $section);
+        $this->course_activitychooser($course->id);
 
-        return $ajaxcontrol;
+        return $this->render_from_template(
+            'core_courseformat/local/content/divider',
+            [
+                'content' => $this->render($activitychooserbutton),
+                'extraclasses' => 'always-visible my-3',
+            ]
+        );
     }
 
     /**

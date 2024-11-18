@@ -18,11 +18,8 @@ declare(strict_types=1);
 
 namespace core_files\reportbuilder\local\entities;
 
-use context;
-use context_helper;
 use core_collator;
 use core_filetypes;
-use html_writer;
 use lang_string;
 use license_manager;
 use stdClass;
@@ -48,6 +45,16 @@ class file extends base {
     protected function get_default_tables(): array {
         return [
             'files',
+        ];
+    }
+
+    /**
+     * Database tables that this entity no longer uses
+     *
+     * @return string[]
+     */
+    protected function get_deprecated_tables(): array {
+        return [
             'context',
         ];
     }
@@ -90,7 +97,6 @@ class file extends base {
      */
     protected function get_all_columns(): array {
         $filesalias = $this->get_table_alias('files');
-        $contextalias = $this->get_table_alias('context');
 
         // Name.
         $columns[] = (new column(
@@ -220,52 +226,6 @@ class file extends base {
                 return $licenses[$license]->fullname;
             });
 
-        // Context.
-        $columns[] = (new column(
-            'context',
-            new lang_string('context'),
-            $this->get_entity_name()
-        ))
-            ->add_joins($this->get_joins())
-            ->set_type(column::TYPE_TEXT)
-            ->add_join("LEFT JOIN {context} {$contextalias} ON {$contextalias}.id = {$filesalias}.contextid")
-            ->add_fields("{$filesalias}.contextid, " . context_helper::get_preload_record_columns_sql($contextalias))
-            // Sorting may not order alphabetically, but will at least group contexts together.
-            ->set_is_sortable(true)
-            ->set_is_deprecated('See \'context:name\' for replacement')
-            ->add_callback(static function($contextid, stdClass $context): string {
-                if ($contextid === null) {
-                    return '';
-                }
-
-                context_helper::preload_from_record($context);
-                return context::instance_by_id($contextid)->get_context_name();
-            });
-
-        // Context link.
-        $columns[] = (new column(
-            'contexturl',
-            new lang_string('contexturl'),
-            $this->get_entity_name()
-        ))
-            ->add_joins($this->get_joins())
-            ->set_type(column::TYPE_TEXT)
-            ->add_join("LEFT JOIN {context} {$contextalias} ON {$contextalias}.id = {$filesalias}.contextid")
-            ->add_fields("{$filesalias}.contextid, " . context_helper::get_preload_record_columns_sql($contextalias))
-            // Sorting may not order alphabetically, but will at least group contexts together.
-            ->set_is_sortable(true)
-            ->set_is_deprecated('See \'context:link\' for replacement')
-            ->add_callback(static function($contextid, stdClass $context): string {
-                if ($contextid === null) {
-                    return '';
-                }
-
-                context_helper::preload_from_record($context);
-                $context = context::instance_by_id($contextid);
-
-                return html_writer::link($context->get_url(), $context->get_context_name());
-            });
-
         // Content hash.
         $columns[] = (new column(
              'contenthash',
@@ -306,10 +266,8 @@ class file extends base {
             $this->get_entity_name()
         ))
             ->add_joins($this->get_joins())
-            ->set_type(column::TYPE_INTEGER)
             ->add_fields("{$filesalias}.itemid")
-            ->set_is_sortable(true)
-            ->set_disabled_aggregation_all();
+            ->set_is_sortable(true);
 
         // Time created.
         $columns[] = (new column(
@@ -394,6 +352,16 @@ class file extends base {
                 core_collator::asort($mimetypes);
                 return $mimetypes;
             });
+
+        // Author.
+        $filters[] = (new filter(
+            text::class,
+            'author',
+            new lang_string('author', 'core_repository'),
+            $this->get_entity_name(),
+            "{$filesalias}.author"
+        ))
+            ->add_joins($this->get_joins());
 
         // License (consider null = 'unknown/license not specified' for filtering purposes).
         $filters[] = (new filter(

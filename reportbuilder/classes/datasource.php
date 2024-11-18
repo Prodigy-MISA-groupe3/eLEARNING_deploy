@@ -48,41 +48,6 @@ abstract class datasource extends base {
     private $activeconditions;
 
     /**
-     * Add columns from the given entity name to be available to use in a custom report
-     *
-     * Wildcard matching is supported with '*' in both $include and $exclude, e.g. ['customfield*']
-     *
-     * @param string $entityname
-     * @param string[] $include Include only these columns, if omitted then include all
-     * @param string[] $exclude Exclude these columns, if omitted then exclude none
-     * @throws coding_exception If both $include and $exclude are non-empty
-     */
-    final protected function add_columns_from_entity(string $entityname, array $include = [], array $exclude = []): void {
-        if (!empty($include) && !empty($exclude)) {
-            throw new coding_exception('Cannot specify columns to include and exclude simultaneously');
-        }
-
-        $entity = $this->get_entity($entityname);
-
-        // Retrieve filtered columns from entity, respecting given $include/$exclude parameters.
-        $columns = array_filter($entity->get_columns(), function(column $column) use ($include, $exclude): bool {
-            if (!empty($include)) {
-                return $this->report_element_search($column->get_name(), $include);
-            }
-
-            if (!empty($exclude)) {
-                return !$this->report_element_search($column->get_name(), $exclude);
-            }
-
-            return true;
-        });
-
-        foreach ($columns as $column) {
-            $this->add_column($column);
-        }
-    }
-
-    /**
      * Add default datasource columns to the report
      *
      * Uses column data returned by the source {@see get_default_columns} and {@see get_default_column_sorting} methods
@@ -181,41 +146,6 @@ abstract class datasource extends base {
     }
 
     /**
-     * Add filters from the given entity name to be available to use in a custom report
-     *
-     * Wildcard matching is supported with '*' in both $include and $exclude, e.g. ['customfield*']
-     *
-     * @param string $entityname
-     * @param string[] $include Include only these filters, if omitted then include all
-     * @param string[] $exclude Exclude these filters, if omitted then exclude none
-     * @throws coding_exception If both $include and $exclude are non-empty
-     */
-    final protected function add_filters_from_entity(string $entityname, array $include = [], array $exclude = []): void {
-        if (!empty($include) && !empty($exclude)) {
-            throw new coding_exception('Cannot specify filters to include and exclude simultaneously');
-        }
-
-        $entity = $this->get_entity($entityname);
-
-        // Retrieve filtered filters from entity, respecting given $include/$exclude parameters.
-        $filters = array_filter($entity->get_filters(), function(filter $filter) use ($include, $exclude): bool {
-            if (!empty($include)) {
-                return $this->report_element_search($filter->get_name(), $include);
-            }
-
-            if (!empty($exclude)) {
-                return !$this->report_element_search($filter->get_name(), $exclude);
-            }
-
-            return true;
-        });
-
-        foreach ($filters as $filter) {
-            $this->add_filter($filter);
-        }
-    }
-
-    /**
      * Add default datasource filters to the report
      *
      * This method is optional and can be called when the report is created to add the default filters defined in the
@@ -264,8 +194,7 @@ abstract class datasource extends base {
                         " {$instance->get_is_deprecated_message()}", DEBUG_DEVELOPER);
                 }
 
-                $this->activefilters['values'][$instance->get_unique_identifier()] =
-                    $instance->set_persistent($filter);
+                $this->activefilters['values'][$instance->get_unique_identifier()] = $instance->set_persistent($filter);
             }
         }
 
@@ -347,9 +276,10 @@ abstract class datasource extends base {
      * Override parent method, returning only those conditions specifically added to the custom report (rather than all that are
      * available)
      *
+     * @param bool $checkavailable
      * @return filter[]
      */
-    public function get_active_conditions(): array {
+    public function get_active_conditions(bool $checkavailable = true): array {
         $reportid = $this->get_report_persistent()->get('id');
 
         // Determine whether we already retrieved the conditions since the report was last modified.
@@ -364,15 +294,14 @@ abstract class datasource extends base {
         foreach ($activeconditions as $condition) {
             $instance = $this->get_condition($condition->get('uniqueidentifier'));
 
-            // Ensure the condition is still present and available.
-            if ($instance !== null && $instance->get_is_available()) {
+            // Ensure the condition is still present and available (if checking available status).
+            if ($instance !== null && (!$checkavailable || $instance->get_is_available())) {
                 if ($instance->get_is_deprecated()) {
                     debugging("The condition '{$instance->get_unique_identifier()}' is deprecated, please do not use it any more." .
                         " {$instance->get_is_deprecated_message()}", DEBUG_DEVELOPER);
                 }
 
-                $this->activeconditions['values'][$instance->get_unique_identifier()] =
-                    $instance->set_persistent($condition);
+                $this->activeconditions['values'][$instance->get_unique_identifier()] = $instance->set_persistent($condition);
             }
         }
 
@@ -420,29 +349,5 @@ abstract class datasource extends base {
      */
     final public static function report_elements_modified(int $reportid): void {
         self::$elementsmodified[$reportid] = microtime(true);
-    }
-
-    /**
-     * Search for given element within list of search items, supporting '*' wildcards
-     *
-     * @param string $element
-     * @param string[] $search
-     * @return bool
-     */
-    private function report_element_search(string $element, array $search): bool {
-        foreach ($search as $item) {
-            // Simple matching.
-            if ($element === $item) {
-                return true;
-            }
-
-            // Wildcard matching.
-            if (strpos($item, '*') !== false) {
-                $pattern = '/^' . str_replace('\*', '.*', preg_quote($item)) . '$/';
-                return (bool) preg_match($pattern, $element);
-            }
-        }
-
-        return false;
     }
 }
