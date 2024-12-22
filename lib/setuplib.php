@@ -590,7 +590,7 @@ function initialise_cfg() {
             // Do we have session set up?
             if (empty($SESSION->currenteditingcompany)) {
                 // Cant set SESSION here - stash this in CFG.
-                $CFG->foundcompanyid = $companyid;
+                $CFG->foundcompanyid = $company->id;
             }
         }
     }
