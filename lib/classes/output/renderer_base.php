@@ -361,7 +361,24 @@ class renderer_base {
      * @return moodle_url|false
      */
     public function get_logo_url($maxwidth = null, $maxheight = 200) {
-        global $CFG;
+        global $CFG, $DB, $SESSION;
+
+        // IOMAD
+        if (!empty($SESSION->currenteditingcompany)) {
+            $logo = get_config('core_admin', 'logo'.$SESSION->currenteditingcompany);
+            if (!empty($logo)) {
+                // 200px high is the default image size which should be displayed at 100px in the page to account for retina displays.
+                // It's not worth the overhead of detecting and serving 2 different images based on the device.
+
+                // Hide the requested size in the file path.
+                $filepath = ((int) $maxwidth . 'x' . (int) $maxheight) . '/';
+
+                // Use $CFG->themerev to prevent browser caching when the file changes.
+                return moodle_url::make_pluginfile_url(context_system::instance()->id, 'core_admin', 'logo'.$SESSION->currenteditingcompany, $filepath,
+                    theme_get_revision(), $logo);
+            }
+        }
+
         $logo = get_config('core_admin', 'logo');
         if (empty($logo)) {
             return false;
@@ -392,7 +409,21 @@ class renderer_base {
      * @return moodle_url|false
      */
     public function get_compact_logo_url($maxwidth = 300, $maxheight = 300) {
-        global $CFG;
+        global $CFG, $DB, $SESSION;
+
+        // IOMAD
+        if (!empty($SESSION->currenteditingcompany)) {
+            $logo = get_config('core_admin', 'logocompact'.$SESSION->currenteditingcompany);
+            if (!empty($logo)) {
+                // Hide the requested size in the file path.
+                $filepath = ((int) $maxwidth . 'x' . (int) $maxheight) . '/';
+
+                // Use $CFG->themerev to prevent browser caching when the file changes.
+                return moodle_url::make_pluginfile_url(context_system::instance()->id, 'core_admin', 'logocompact'.$SESSION->currenteditingcompany, $filepath,
+                    theme_get_revision(), $logo);
+            }
+        }
+
         $logo = get_config('core_admin', 'logocompact');
         if (empty($logo)) {
             return false;

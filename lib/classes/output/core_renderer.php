@@ -3511,11 +3511,53 @@ EOD;
      * @return string
      */
     public function custom_menu($custommenuitems = '') {
-        global $CFG;
+        global $CFG, $DB;
 
         if (empty($custommenuitems) && !empty($CFG->custommenuitems)) {
             $custommenuitems = $CFG->custommenuitems;
         }
+
+        // IOMAD
+        $systemcontext = \context_system::instance();
+        $companyid = iomad::get_my_companyid($systemcontext, false);
+        if (!empty($companyid)) {
+            $companycontext = \core\context\company::instance($companyid);
+        } else {
+            $companycontext = $systemcontext;
+        }
+
+        $iomadlink = "";
+        if ($DB->get_manager()->table_exists('company') &&
+            (\iomad::has_capability('block/iomad_company_admin:companymanagement_view', $companycontext) ||
+             \iomad::has_capability('block/iomad_company_admin:usermanagement_view', $companycontext) ||
+             \iomad::has_capability('block/iomad_company_admin:coursemanagement_view', $companycontext) ||
+             \iomad::has_capability('block/iomad_company_admin:licensemanagement_view', $companycontext) ||
+             \iomad::has_capability('block/iomad_company_admin:competencymanagement_view', $companycontext) ||
+             \iomad::has_capability('block/iomad_commerce:admin_view', $companycontext) ||
+             \iomad::has_capability('block/iomad_microlearning:view', $companycontext) ||
+             \iomad::has_capability('block/iomad_reports:view', $companycontext))) {
+            $iomadlink = "-" . get_string('dashboard', 'block_iomad_company_admin') . "|" .
+                         '/blocks/iomad_company_admin/index.php' . "\n\r";
+        }
+
+        // Deal with company custom and shop menu items.
+        $shoplink = "";
+
+        // Deal with company custom menu items.
+        if ($companyid = \iomad::get_my_companyid(\context_system::instance(), false)) {
+            if ($DB->get_manager()->table_exists('company') &&
+                $companyrec = $DB->get_record('company', array('id' => $companyid))) {
+                if (!empty($companyrec->custommenuitems)) {
+                    $custommenuitems = $companyrec->custommenuitems;
+                }
+                if (\block_iomad_commerce\helper::is_commerce_configured() &&
+                    ($CFG->commerce_admin_enableall || !empty($companyrec->ecommerce))) {
+                    $shoplink = \block_iomad_commerce\helper::get_shop_menu_link($companyrec);
+                }
+            }
+        }
+
+        $custommenuitems = $iomadlink . $shoplink . $custommenuitems;
 
         // If filtering of the primary custom menu is enabled, apply only the string filters.
         if (!empty($CFG->navfilter) && !empty($CFG->stringfilters)) {
@@ -4097,8 +4139,21 @@ EOD;
      * @return moodle_url The moodle_url for the favicon
      */
     public function favicon() {
+        global $SESSION;
+
         $logo = null;
         if (!during_initial_install()) {
+
+            // IOMAD
+            if (!empty($SESSION->currenteditingcompany)) {
+                $logo = get_config('core_admin', 'favicon'.$SESSION->currenteditingcompany);
+                if (!empty($logo)) {
+                    // Use $CFG->themerev to prevent browser caching when the file changes.
+                    return moodle_url::make_pluginfile_url(context_system::instance()->id, 'core_admin', 'favicon'.$SESSION->currenteditingcompany, '64x64/',
+                        theme_get_revision(), $logo);
+                }
+            }
+
             $logo = get_config('core_admin', 'favicon');
         }
         if (empty($logo)) {
