@@ -429,6 +429,9 @@ class theme_config {
      */
     public $removedprimarynavitems = [];
 
+    // IOMAD - added option to show if this is an IOMAD theme or not
+    public $isiomadtheme = false;
+
     /**
      * Load the config.php file for a particular theme, and return an instance
      * of this class. (That is, this is a factory method.)
