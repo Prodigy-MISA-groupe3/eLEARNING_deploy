@@ -15,27 +15,27 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Event observer for trainingevent activity plugin.
+ * Event observer for block iomad_approve_access plugin.
  *
- * @package    mod_trainingevent
- * @copyright  2022 Derick Turner
+ * @package    block_iomad_approve_access
+ * @copyright  2025 Derick Turner
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->dirroot.'/mod/trainingevent/lib.php');
+require_once($CFG->dirroot.'/blocks/iomad_approve_access/lib.php');
 
-class mod_trainingevent_observer {
+class block_iomad_approve_access_observer {
 
     /**
-     * Triggered via mod_trainingevent::user_added event.
+     * Triggered via mod_trainingevent::trainingevent_reset event.
      *
-     * @param \mod_trainingevent\event\user_added $event
+     * @param \mod_trainingevent\event\trainingevent_reset $event
      * @return bool true on success.
      */
-    public static function user_attending($event) {
-        trainingevent_user_attending($event);
+    public static function trainingevent_reset($event) {
+        iomad_approve_access::trainingevent_reset($event);
         return true;
     }
 
@@ -46,7 +46,7 @@ class mod_trainingevent_observer {
      * @return bool true on success.
      */
     public static function user_removed($event) {
-        trainingevent_user_removed($event);
+        iomad_approve_access::user_removed($event);
         return true;
     }
 
@@ -62,13 +62,24 @@ class mod_trainingevent_observer {
     }
 
     /**
-     * Triggered via mod_trainingevent::attendance_changed event.
+     * Triggered via mod_trainingevent::attendance_requested event.
      *
-     * @param \mod_trainingevent\event\attendance_changed $event
+     * @param \mod_trainingevent\event\attendance_requested $event
      * @return bool true on success.
      */
-    public static function request_denied($event) {
-        trainingevent_request_denied($event);
+    public static function attendance_requested($event) {
+        iomad_approve_access::attendance_requested($event);
+        return true;
+    }
+
+    /**
+     * Triggered via mod_trainingevent::attendance_withdrawn event.
+     *
+     * @param \mod_trainingevent\event\attendance_withdrawn $event
+     * @return bool true on success.
+     */
+    public static function attendance_withdrawn($event) {
+        iomad_approve_access::user_removed($event);
         return true;
     }
 }
