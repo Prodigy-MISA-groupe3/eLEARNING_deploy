@@ -79,7 +79,7 @@ class hook_callbacks {
         if (!empty($policies)) {
             $url = new moodle_url('/admin/tool/iomadpolicy/viewall.php', ['returnurl' => $PAGE->url]);
             $hook->add_html(
-                html_writer::link($url, get_string('userpolicysettings', 'tool_iomadpolicy'), ['class' => 'policiesfooter']),
+                html_writer::link($url, get_string('useriomadpolicysettings', 'tool_iomadpolicy'), ['class' => 'policiesfooter']),
             );
         }
     }
