@@ -109,7 +109,7 @@ class processor {
         // Get name for company license.
         $companyid = iomad::get_my_companyid(context_system::instance());
         $company = $DB->get_record('company', ['id' => $companyid]);
-        $licensename = $company->shortname . " [" . $iteminfo->name . "] " . date($CFG->iomad_date_format);
+        $licensename = $company->shortname . " [" . $iteminfo->name . "] " . userdate(time(), $CFG->iomad_date_format);
         $count = $DB->count_records_sql("SELECT COUNT(*) FROM {companylicense} WHERE " . $DB->sql_like('name', ":licensename"),
                                          ['licensename' => str_replace("'", "\'", $licensename) . "%'"]);
 
@@ -206,7 +206,7 @@ class processor {
         $company = $DB->get_record('company', ['id' => $companyid]);
         $item = $DB->get_record('course_shopsettings', ['id' => $invoiceitem->invoiceableitemid]);
         $courses = $DB->get_records('course_shopsettings_courses', ['itemid' => $item->id]);
-        $licensename = $company->shortname . " [" . $item->name . "] " . date($CFG->iomad_date_format);
+        $licensename = $company->shortname . " [" . $item->name . "] " . userdate(time(), $CFG->iomad_date_format);
         $count = $DB->count_records_sql("SELECT COUNT(*) FROM {companylicense} WHERE name LIKE '" .
                                         (str_replace("'", "\'", $licensename)) . "%'");
         if ($count) {

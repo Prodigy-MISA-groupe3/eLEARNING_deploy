@@ -140,7 +140,7 @@ class user_table extends table_sql {
 
         if ($this->is_downloading() || empty($USER->editing)) {
             if (!empty($row->licenseallocated)) {
-                return format_string(date($CFG->iomad_date_format, $row->licenseallocated));
+                return format_string(userdate($row->licenseallocated, $CFG->iomad_date_format));
             } else {
                 return;
             }
@@ -162,7 +162,7 @@ class user_table extends table_sql {
 
         if ($this->is_downloading() || empty($USER->editing)) {
             if (!empty($row->timeenrolled)) {
-                return date($CFG->iomad_date_format, $row->timeenrolled);
+                return userdate($row->timeenrolled, $CFG->iomad_date_format);
             } else {
                 return;
             }
@@ -184,7 +184,7 @@ class user_table extends table_sql {
 
         if ($this->is_downloading() || empty($USER->editing)) {
             if (!empty($row->timecompleted)) {
-                return date($CFG->iomad_date_format, $row->timecompleted);
+                return userdate($row->timecompleted, $CFG->iomad_date_format);
             } else {
                 return;
             }
@@ -210,7 +210,7 @@ class user_table extends table_sql {
             return get_string('notapplicable', 'local_report_completion');
         } else {
             if (!empty($row->timeexpires)) {
-                return date($CFG->iomad_date_format, $row->timeexpires);
+                return userdate($row->timeexpires, $CFG->iomad_date_format);
             }
         }
     }
@@ -390,7 +390,7 @@ class user_table extends table_sql {
      */
     public function col_modifiedtime($row) {
         global $DB, $CFG;
-        return date($CFG->iomad_date_format, $row->modifiedtime);
+        return userdate($row->modifiedtime, $CFG->iomad_date_format);
     }
 
     /**
@@ -423,10 +423,10 @@ class user_table extends table_sql {
             $criteria = $completion->get_criteria();
             $complete = $completion->is_complete();
             if ($complete) {
-                $completestring = " - " . date($CFG->iomad_date_format, $completion->timecompleted);
+                $completestring = " - " . userdate($completion->timecompleted, $CFG->iomad_date_format);
                 $completed++;
             } else if (!empty($row->timecompleted)) {
-                $completestring = " - " . date($CFG->iomad_date_format, $row->timecompleted);
+                $completestring = " - " . userdate($row->timecompleted, $CFG->iomad_date_format);
                 $completed++;
             } else {
                 $completestring = " - " . get_string('no');
@@ -457,7 +457,7 @@ class user_table extends table_sql {
         }
 
         // Add in the modified time.
-        $tooltip .= format_string(get_string('lastmodified') . " - " .date($CFG->iomad_date_format, $row->modifiedtime));
+        $tooltip .= format_string(get_string('lastmodified') . " - " .userdate($row->modifiedtime, $CFG->iomad_date_format));
 
         if (!empty($row->timecompleted)) {
             $progress = 100;
@@ -567,12 +567,12 @@ class user_table extends table_sql {
         } else {
             list($type, $criteriaid) = explode('_', $column);
             if ($type == "criteria" && !empty($row->timecompleted)) {
-                return date($CFG->iomad_date_format, $row->timecompleted);
+                return userdate($row->timecompleted, $CFG->iomad_date_format);
             } else {
                 if ($type == 'criteria' ) {
                     if ($critrecord = $DB->get_record('course_completion_crit_compl', ['userid' => $row->userid, 'course' => $row->courseid, 'criteriaid' => $criteriaid])) {
                         if (!empty($critrecord->timecompleted)) {
-                            return date($CFG->iomad_date_format, $critrecord->timecompleted);
+                            return userdate($critrecord->timecompleted, $CFG->iomad_date_format);
                         } else {
                             return null;
                         }

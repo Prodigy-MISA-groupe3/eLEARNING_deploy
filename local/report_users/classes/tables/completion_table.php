@@ -69,7 +69,7 @@ class completion_table extends table_sql {
 
         if ($this->is_downloading() || empty($USER->editing)) {
             if (!empty($row->licenseallocated)) {
-                return format_string(date($CFG->iomad_date_format, $row->licenseallocated) . " (" . $row->licensename . ")");
+                return format_string(userdate($row->licenseallocated, $CFG->iomad_date_format) . " (" . $row->licensename . ")");
             } else {
                 return;
             }
@@ -91,7 +91,7 @@ class completion_table extends table_sql {
 
         if ($this->is_downloading() || empty($USER->editing)) {
             if (!empty($row->timeenrolled)) {
-                return date($CFG->iomad_date_format, $row->timeenrolled);
+                return userdate($row->timeenrolled, $CFG->iomad_date_format);
             } else {
                 return;
             }
@@ -113,7 +113,7 @@ class completion_table extends table_sql {
 
         if ($this->is_downloading() || empty($USER->editing)) {
             if (!empty($row->timecompleted)) {
-                return date($CFG->iomad_date_format, $row->timecompleted);
+                return userdate($row->timecompleted, $CFG->iomad_date_format);
             } else {
                 return;
             }
@@ -137,7 +137,7 @@ class completion_table extends table_sql {
             return get_string('notapplicable', 'local_report_completion');
         } else {
             if (!empty($row->timeexpires)) {
-                return date($CFG->iomad_date_format, $row->timeexpires);
+                return userdate($row->timeexpires, $CFG->iomad_date_format);
             }
         }
     }
@@ -339,10 +339,10 @@ class completion_table extends table_sql {
             $criteria = $completion->get_criteria();
             $complete = $completion->is_complete();
             if ($complete) {
-                $completestring = " - " . date($CFG->iomad_date_format, $completion->timecompleted);
+                $completestring = " - " . userdate($completion->timecompleted, $CFG->iomad_date_format);
                 $completed++;
             } else if (!empty($row->timecompleted)) {
-                $completestring = " - " . date($CFG->iomad_date_format, $row->timecompleted);
+                $completestring = " - " . userdate($row->timecompleted, $CFG->iomad_date_format);
                 $completed++;
             } else {
                 $completestring = " - " . get_string('no');
@@ -373,7 +373,7 @@ class completion_table extends table_sql {
         }
 
         // Add in the modified time.
-        $tooltip .= format_string(get_string('lastmodified') . " - " .date($CFG->iomad_date_format, $row->modifiedtime));
+        $tooltip .= format_string(get_string('lastmodified') . " - " .userdate($row->modifiedtime, $CFG->iomad_date_format));
 
         if (!empty($row->timecompleted)) {
             $progress = 100;
