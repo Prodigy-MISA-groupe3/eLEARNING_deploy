@@ -342,8 +342,7 @@ echo $OUTPUT->header();
 echo html_writer::start_tag('p');
 echo html_writer::tag('a',
                       get_string('checkcoursestatusmoodle', 'local_iomad_track'),
-                      array('class' => 'btn-primary',
-                            'href' => new moodle_url('/local/iomad_track/import.php',
+                      array('href' => new moodle_url('/local/iomad_track/import.php',
                                                      array('checkcourses' => true,
                                                            'sesskey' => sesskey()))));
 
@@ -386,8 +385,7 @@ echo html_writer::end_tag('p');
 echo html_writer::start_tag('p');
 echo html_writer::tag('a',
                       get_string('importcompletionsfrommoodle', 'local_iomad_track'),
-                      array('class' => 'btn-primary',
-                            'href' => new moodle_url('/local/iomad_track/import.php',
+                      array('href' => new moodle_url('/local/iomad_track/import.php',
                                                      array('completions' => true,
                                                            'sesskey' => sesskey()))));
 
@@ -395,8 +393,7 @@ echo html_writer::end_tag('p');
 echo html_writer::start_tag('p');
 echo html_writer::tag('a',
                       get_string('importcompletionsfromfile', 'local_iomad_track'),
-                      array('class' => 'btn-primary',
-                            'href' => new moodle_url('/local/iomad_track/import.php',
+                      array('href' => new moodle_url('/local/iomad_track/import.php',
                                                      array('fileimport' => true,
                                                            'sesskey' => sesskey()))));
 echo html_writer::end_tag('p');
