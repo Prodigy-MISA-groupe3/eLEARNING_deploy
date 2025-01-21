@@ -155,10 +155,14 @@ if ($ajaxtemplate) {
     // What are we dealing with?
     if ($type == 'c') {
         $tablename = "email_template";
+        $tablenamestrings = "email_template_strings";
         $tablekey = "companyid";
+        $stringkey = "templateid";
     } else if ($type == 't') {
         $tablename = "email_templateset_templates";
+        $tablenamestrings = "email_templateset_template_strings";
         $tablekey = "templateset";
+        $stringkey = "templatesetid";
     }
     // What are we disabling?
     if ($managertype == 'e') {
@@ -178,10 +182,12 @@ if ($ajaxtemplate) {
         // Get all the records.
         $findsql = "SELECT et.id, et.name
                     FROM {" . $tablename . "} et
+                    JOIN {" . $tablenamestrings ."} ets
+                    ON et.id = ets.$stringkey
                     JOIN {tool_customlang} cl
-                     ON (et.lang=cl.lang
+                     ON (ets.lang=cl.lang
                          AND cl.stringid = CONCAT(et.name, '_name'))
-                    WHERE et.$tablekey = :id AND et.lang = :lang
+                    WHERE et.$tablekey = :id AND ets.lang = :lang
                     ORDER BY cl.master";
         $sqlparams = ['id' => $id, 'lang' => $lang];
 
@@ -217,6 +223,10 @@ if ($action == 'delete' && confirm_sesskey()) {
         die;
     } else {
         // Delete the template.
+        $templatesetstrings = $DB->get_records('email_templateset_templates', array('templateset' => $templatesetid));
+        foreach ($templatesetstrings as $templatesetstring) {
+            $DB->delete_records('email_templateset_template_strings', array('templatesetid' => $templatesetstring->id));
+        }
         $DB->delete_records('email_templateset_templates', array('templateset' => $templatesetid));
         $DB->delete_records('email_templateset', array('id' => $templatesetid));
         if ($SESSION->currenttemplatesetid == $templatesetid) {
@@ -277,7 +287,13 @@ if ($data = $mform->get_data()) {
     $emailtemplates = $DB->get_records('email_template', array('companyid' => $companyid));
     foreach ($emailtemplates as $emailtemplate) {
         $emailtemplate->templateset = $templatesetid;
-        $DB->insert_record('email_templateset_templates', $emailtemplate);
+        $templateid = $DB->insert_record('email_templateset_templates', $emailtemplate);
+        $stringtemplates = $DB->get_records('email_template_strings', ['templateid' => $emailtemplate->id]);
+        foreach ($stringtemplates as $stringtemplate) {
+            $stringtemplate->templateid = $emailtemplate->id;
+            unset($stringtemplate->id);
+            $DB->insert_record('email_template_strings', $stringtemplate);
+        }
     }
     redirect($linkurl, get_string('emailtemplatesetsaved', 'local_email'), null, \core\output\notification::NOTIFY_SUCCESS);
 }
@@ -287,10 +303,10 @@ $buttons = "";
 // Deal with the page buttons.
 if (empty($manage)) {
     $saveurl = new moodle_url('/local/email/template_list.php',
-                                array('savetemplateset' => 1,
-                                      'templatesetid' => $templatesetid));
+                              array('savetemplateset' => 1,
+                                    'templatesetid' => $templatesetid));
     $manageurl = new moodle_url('/local/email/template_list.php',
-                                  array('manage' => 1));
+                                array('manage' => 1));
     $backbutton = '';
     if (!empty($templatesetid)) {
         if ($DB->get_record('email_templateset', array('id' => $templatesetid))) {
@@ -305,9 +321,9 @@ if (empty($manage)) {
             $buttons .= $backbutton;
         }
     } else {
-            $buttons .= $output->single_button($saveurl, get_string('savetemplateset', 'local_email'), 'get');
-            $buttons .= $output->single_button($manageurl, get_string('managetemplatesets', 'local_email'), 'get');
-            $buttons .= $backbutton;
+        $buttons .= $output->single_button($saveurl, get_string('savetemplateset', 'local_email'), 'get');
+        $buttons .= $output->single_button($manageurl, get_string('managetemplatesets', 'local_email'), 'get');
+        $buttons .= $backbutton;
     }
 } else {
     $buttons .= $output->single_button($linkurl, get_string('back'), 'get');
@@ -328,6 +344,7 @@ if (!empty($save)) {
     echo $OUTPUT->footer();
     die;
 }
+
 // Output the search form.
 $searchform = new \local_email\forms\template_search_form();
 $searchform->set_data(['search' => $search, 'manage' => $manage]);
@@ -375,39 +392,44 @@ if ($manage) {
     }
 
     // Set up the table.
-    $selectsql = "et.*, cl.master AS templatename, :prefix AS prefix";
+    $selectsql = "et.*, ets.lang, ets.subject, ets.body, ets.signature, cl.master AS templatename, ets.id as templatestringid, :prefix AS prefix";
     if (empty($templatesetid)) {
         $fromsql = "{email_template} et
+                    JOIN {email_template_strings} ets
+                     ON (et.id = ets.templateid)
                     JOIN {tool_customlang} cl
-                     ON (et.lang=cl.lang
+                     ON (ets.lang=cl.lang
                          AND cl.stringid = CONCAT(et.name, '_name'))";
-        $wheresql = "et.companyid = :companyid AND et.lang = :lang $searchsql";
+        $wheresql = "et.companyid = :companyid AND ets.lang = :lang $searchsql";
         $sqlparams = ['companyid' => $companyid, 'lang' => $lang, 'prefix' => $prefix, 'templatename' => "%" . $search . "%"];
     } else {
         $fromsql = "{email_templateset_templates} et
+                    JOIN {email_templateset_template_strings} ets
+                     ON (et.id = ets.templatesetid)
                     JOIN {tool_customlang} cl
-                     ON (et.lang=cl.lang
+                     ON (ets.lang=cl.lang
                          AND cl.stringid = CONCAT(et.name, '_name'))";
-        $wheresql = "et.templateset = :templatesetid AND et.lang = :lang $searchsql";
+        $wheresql = "et.templateset = :templatesetid AND ets.lang = :lang $searchsql";
         $sqlparams = ['templatesetid' => $templatesetid, 'lang' => $lang, 'prefix' => $prefix, 'templatename' => "%" . $search . "%"];
     }
 
     // Set up the headings -- All this for the checkbox.
-    $enabledrecs = $DB->get_records_sql_menu("SELECT et.id, et.disabled
+    $enabledrecs = $DB->get_records_sql_menu("SELECT DISTINCT et.id, et.disabled
                                               FROM $fromsql
                                               WHERE $wheresql
                                               ORDER BY cl.master",
                                               $sqlparams,
                                               $page * $perpage,
                                               $perpage);
-    $manenabledrecs = $DB->get_records_sql_menu("SELECT et.id, et.disabledmanager
+
+    $manenabledrecs = $DB->get_records_sql_menu("SELECT DISTINCT et.id, et.disabledmanager
                                                  FROM $fromsql
                                                  WHERE $wheresql
                                                  ORDER BY cl.master",
                                                  $sqlparams,
                                                  $page * $perpage,
                                                  $perpage);
-    $supenabledrecs = $DB->get_records_sql_menu("SELECT et.id, et.disabledsupervisor
+    $supenabledrecs = $DB->get_records_sql_menu("SELECT DISTINCT et.id, et.disabledsupervisor
                                                  FROM $fromsql
                                                  WHERE $wheresql
                                                  ORDER BY cl.master",

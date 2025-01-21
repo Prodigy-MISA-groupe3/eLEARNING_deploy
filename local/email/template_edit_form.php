@@ -42,6 +42,7 @@ $edit = optional_param('edit', '', PARAM_TEXT);
 $view = optional_param('view', '', PARAM_TEXT);
 $add = optional_param('add', '', PARAM_TEXT);
 $reset = optional_param('reset', '', PARAM_TEXT);
+$resetall = optional_param('resetall', '', PARAM_TEXT);
 
 if (!empty($edit)) {
     $isediting = true;
@@ -76,11 +77,25 @@ $company = new company($companyid);
 iomad::require_capability('local/email:edit', $companycontext);
 
 if (empty($templatesetid)) {
-    if (!$templaterecord = $DB->get_record('email_template',['id' => $templateid])) {
+    if (!$templaterecord = $DB->get_record_sql("SELECT et.*, ets.id AS templatestringid, ets.subject,ets.body, ets.signature, ets.lang
+                                                FROM {email_template} et
+                                                JOIN {email_template_strings} ets
+                                                ON (et.id = ets.templateid)
+                                                WHERE et.id = :id
+                                                AND ets.lang = :lang",
+                                               ['id' => $templateid,
+                                                'lang' => $lang])) {
         throw new \moodle_exception('templatenotfound', 'local_email', new moodle_url('/local/email/template_list.php'));
     }
 } else {
-    if (!$templaterecord = $DB->get_record('email_templateset_templates', ['id' => $templateid])) {
+    if (!$templaterecord = $DB->get_record_sql("SELECT et.*, ets.id AS templatestringid, ets.subject,ets.body, ets.signature, ets.lang
+                                                FROM {email_templateset_templates} et
+                                                JOIN {email_templateset_template_strings} ets
+                                                ON (et.id = ets.templateid)
+                                                WHERE et.id = :id
+                                                AND ets.lang = :lang",
+                                               ['id' => $templateid,
+                                               'lang' => $lang])) {
         throw new \moodle_exception('templatenotfound', 'local_email', new moodle_url('/local/email/template_list.php'));
     }
 }
@@ -111,7 +126,9 @@ $PAGE->requires->js('/local/email/module.js');
 
 // Are we dealing with a reset?
 //  Deal with any deletes.
-if ($reset == 'Reset' && confirm_sesskey()) {
+if ((!empty($reset) ||
+     !empty($resetall)) &&
+    confirm_sesskey()) {
     if ($confirm != md5($templateid)) {
         echo $OUTPUT->header();
 
@@ -121,16 +138,20 @@ if ($reset == 'Reset' && confirm_sesskey()) {
                        'lang' => $lang,
                        'confirm' => md5($templateid),
                        'sesskey' => sesskey(),
-                       'reset' => 'Reset'];
-        echo $OUTPUT->confirm(get_string('resettemplatefull', 'local_email', "'" . get_string($templaterecord->name . "_name", 'local_email') ."'"),
+                       'reset' => $reset,
+                       'resetall' => $resetall];
+        if (!empty($reset)) {
+            $resetstring = get_string('resettemplatefull', 'local_email', "'" . get_string($templaterecord->name . "_name", 'local_email') ."'");
+        } else {
+            $resetstring = get_string('resettemplatefulllangs', 'local_email', "'" . get_string($templaterecord->name . "_name", 'local_email') ."'");
+        }
+        echo $OUTPUT->confirm($resetstring,
                               new moodle_url('/local/email/template_edit_form.php', $optionsyes),
                                              '/local/email/template_list.php');
         echo $OUTPUT->footer();
         die;
     } else {
         // Reset the template.
-        $templaterecord->subject = '';
-        $templaterecord->body = '';
         $templaterecord->emailto = '';
         $templaterecord->emailfrom = '';
         $templaterecord->emailreplyto = '';
@@ -143,11 +164,24 @@ if ($reset == 'Reset' && confirm_sesskey()) {
         $templaterecord->repeatday = 0;
         $templaterecord->repeatperiod = 0;
         $templaterecord->repeatvalue = 0;
-        $templaterecord->signature = "";
         if (empty($templatesetid)) {
             $DB->update_record('email_template', $templaterecord);
+            $resetarray = ['templateid' => $templaterecord->id];
+            if (!empty($reset)) {
+                $resetarray['lang'] = $lang;
+            }
+            $DB->set_field('email_template_strings', 'subject', null, $resetarray);
+            $DB->set_field('email_template_strings', 'body', null, $resetarray);
+            $DB->set_field('email_template_strings', 'signature', null, $resetarray);
         } else {
             $DB->update_record('email_templateset_templates', $templaterecord);
+            $resetarray = ['templatesetid' => $templaterecord->id];
+            if (!empty($reset)) {
+                $resetarray['lang'] = $lang;
+            }
+            $DB->set_field('email_templateset_template_strings', 'subject', null, $resetarray);
+            $DB->set_field('email_templateset_template_strings', 'body', null, $resetarray);
+            $DB->set_field('email_templateset_template_strings', 'signature', null, $resetarray);
         }
 
         redirect(new moodle_url('/local/email/template_list.php', ['templatesetid' => $templatesetid]),
@@ -223,8 +257,12 @@ if ($mform->is_cancelled()) {
         if (!empty($data->templatesetid)) {
             $data->templateset = $data->templatesetid;
             $templateid = $DB->insert_record('email_templateset_templates', $data);
+            $data->templatesetid = $templateid;
+            $DB->insert_record('email_templateset_template_strings', $data);
         } else {
             $templateid = $DB->insert_record('email_template', $data);
+            $data->templateid = $templateid;
+            $DB->insert_record('email_template_strings', $data);
         }
         $data->id = $templateid;
         $redirectmessage = get_string('templatecreatedok', 'local_email');
@@ -235,8 +273,14 @@ if ($mform->is_cancelled()) {
         if (!empty($data->templatesetid)) {
             $data->templateset = $data->templatesetid;
             $DB->update_record('email_templateset_templates', $data);
+            $data->templatesetid = $data->id;
+            $data->id = $data->templatestringid;
+            $DB->update_record('email_templateset_template_strings', $data);
         } else {
             $DB->update_record('email_template', $data);
+            $data->templateid = $data->id;
+            $data->id = $data->templatestringid;
+            $DB->update_record('email_template_strings', $data);
         }
         $redirectmessage = get_string('templateupdatedok', 'local_email');
     }

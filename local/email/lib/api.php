@@ -960,12 +960,26 @@ class EmailTemplate {
 
         $email = local_email::get_templates();
         // Try to get it out of the database, otherwise get it from config file.
-        if (!isset($companyid) || !$template = $DB->get_record('email_template', array('name' => $templatename,
-                                                                                       'companyid' => $companyid,
-                                                                                       'lang' => $this->user->lang), '*')) {
-            if (!$template = $DB->get_record('email_template', array('name' => $templatename,
-                                                                     'companyid' => $companyid,
-                                                                     'lang' => 'en'), '*')) {
+        if (!isset($companyid) || !$template = $DB->get_record_sql("SELECT et.*, ets.lang, ets.subject, ets.body, ets.signature
+                                                                    FROM {email_template} et
+                                                                    JOIN {email_template_strings} ets
+                                                                    ON (et.id = ets.templateid)
+                                                                    WHERE et.companyid = :companyid
+                                                                    AND et.name = :name
+                                                                    AND ets.lang = :lang",
+                                                                   ['name' => $templatename,
+                                                                    'companyid' => $companyid,
+                                                                    'lang' => $this->user->lang])) {
+            if (!$template = $DB->get_record_sql("SELECT et.*, ets.lang, ets.subject, ets.body, ets.signature
+                                                  FROM {email_template} et
+                                                  JOIN {email_template_strings} ets
+                                                  ON (et.id = ets.templateid)
+                                                  WHERE et.companyid = :companyid
+                                                  AND et.name = :name
+                                                  AND ets.lang = :lang",
+                                                 ['name' => $templatename,
+                                                  'companyid' => $companyid,
+                                                  'lang' => 'en'])) {
                 if (isset($email[$templatename])) {
                     $template = (object) $email[$templatename];
                 } else {

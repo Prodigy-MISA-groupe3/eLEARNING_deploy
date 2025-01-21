@@ -81,9 +81,11 @@ class template_edit_form extends moodleform {
         $mform->addElement('hidden', 'templatename', $this->templaterecord->name);
         $mform->addElement('hidden', 'companyid', $this->companyid);
         $mform->addElement('hidden', 'templatesetid', $this->templatesetid);
+        $mform->addElement('hidden', 'templatestringid', $this->templatesetid);
         $mform->addElement('hidden', 'isediting', $this->isediting, array('id' => 'isediting'));
         $mform->setType('isediting', PARAM_INT);
         $mform->setType('templateid', PARAM_INT);
+        $mform->setType('templatestringid', PARAM_INT);
         $mform->setType('companyid', PARAM_INT);
         $mform->setType('templatesetid', PARAM_INT);
         $mform->setType('templatename', PARAM_CLEAN);
@@ -93,7 +95,12 @@ class template_edit_form extends moodleform {
             $mform->setType('lang', PARAM_LANG);
         } else {
             $langs = get_string_manager()->get_list_of_translations();
-            $languages = $DB->get_records('email_template', array('companyid' => $this->companyid, 'name' => $this->templaterecord->name), null, 'id,lang');
+            $languages = $DB->get_records_sql("SELECT DISTINCT ets.lang FROM {email_template} et
+                                               JOIN {email_template_strings} ets ON (et.id = ets.templateid)
+                                               WHERE et.companyid = :companyid
+                                               AND et.name = :name",
+                                              ['companyid' => $this->companyid,
+                                               'name' => $this->templaterecord->name]);
             unset($langs['en']);
             foreach ($languages as $language) {
                 unset($langs[$language->lang]);
@@ -102,13 +109,13 @@ class template_edit_form extends moodleform {
         }
 
         $companymanagers = $company->get_managers_select();
-        $mform->addElement('autocomplete', 'emailto', get_string('to'), $this->multiplecompanymanagers, array('multiple' => true));
+        $mform->addElement('autocomplete', 'emailto', get_string('to', 'local_email'), $this->multiplecompanymanagers, array('multiple' => true));
 
         $mform->addElement('text', 'emailtoother', get_string('toother', 'local_email'),
                             array('size' => 100));
         $mform->setType('emailtoother', PARAM_EMAIL);
 
-        $mform->addElement('autocomplete', 'emailfrom', get_string('from'), $this->companymanagers);
+        $mform->addElement('autocomplete', 'emailfrom', get_string('from', 'local_email'), $this->companymanagers);
 
         $mform->addElement('text', 'emailfromother', get_string('fromother', 'local_email'),
                             array('size' => 100));

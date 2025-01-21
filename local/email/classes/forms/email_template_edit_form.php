@@ -62,6 +62,7 @@ class email_template_edit_form extends moodleform {
         $buttonarr[] = &$mform->createElement('submit', 'view', get_string('view'));
         if (!empty($this->ismodified)) {
             $buttonarr[] = &$mform->createElement('submit', 'reset', get_string('reset'));
+            $buttonarr[] = &$mform->createElement('submit', 'resetall', get_string('resetall', 'reportbuilder'));
         }
         $mform->addGroup($buttonarr, 'buttonar', '', array(' '), false);
 

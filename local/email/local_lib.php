@@ -63,12 +63,6 @@ class local_email {
         } else {
             $editbutton = "";
         }
-        if ($strsend && self::allow_sending_to_template($templatename) ) {
-            $sendbutton = "<a class='btn' href='" . new moodle_url('template_send_form.php',
-                           array("templatename" => $templatename, 'lang' => $lang)) . "'>$strsend</a>";
-        } else {
-            $sendbutton = "";
-        }
 
         $rowform = new email_template_edit_form(new moodle_url('template_edit_form.php'), $company->id, $templatename, $templatesetid);
         $rowform->set_data(array('templatename' => $templatename, 'lang' => $lang));

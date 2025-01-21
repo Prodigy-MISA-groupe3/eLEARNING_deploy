@@ -28,6 +28,9 @@ defined('MOODLE_INTERNAL') || die();
 
 use core\task\adhoc_task;
 use \local_email;
+use \tool_customlang_utils;
+
+require_once($CFG->dirroot . '/admin/tool/customlang/locallib.php');
 
 class importlangpack extends adhoc_task {
 
@@ -53,32 +56,25 @@ class importlangpack extends adhoc_task {
         $newlang = $this->get_custom_data_as_string();
         $sitelang = $CFG->lang;
 
-        // Get all of the templates.
-        $templates = array_keys(local_email::get_templates());
-
         // Deal with templatesets.
-        $templatesets = $DB->get_records('email_templateset', [], 'id', 'id');
+        $templatesets = $DB->get_records('email_templateset_templates');
         foreach ($templatesets as $templateset) {
-            foreach ($templates as $template) {
-                if ($templaterec = $DB->get_record('email_templateset_templates', ['templateset' => $templateset->id, 'name' => $template, 'lang' => $sitelang])) {
-                    unset($templaterec->id);
-                    $templaterec->lang = $newlang;
-                    $DB->insert_record('email_templateset_templates', $templaterec);
-                }
+            if (!$DB->get_record('email_templateset_template_strings', ['templatesetid' => $templateset->id, 'lang' => $newlang])) {
+                $DB->insert_record('email_templateset_template_strings', ['templatesetid' => $templateset->id, 'lang' => $newlang]);
             }
         }
 
         // Deal with companies.
-        $companies = $DB->get_records('company', [], 'id', 'id');
-        foreach ($companies as $company) {
-            foreach ($templates as $template) {
-                if ($templaterec = $DB->get_record('email_template', ['companyid' => $company->id, 'name' => $template, 'lang' => $sitelang])) {
-                    unset($templaterec->id);
-                    $templaterec->lang = $newlang;
-                    $DB->insert_record('email_template', $templaterec);
-                }
+        $templates = $DB->get_records('email_template');
+        foreach ($templates as $template) {
+            if (!$DB->get_record('email_template_strings', ['templateid' => $template->id, 'lang' => $newlang])) {
+                $DB->insert_record('email_template_strings', ['templateid' => $template->id, 'lang' => $newlang]);
             }
         }
+
+        // Reload the custom lang table.
+        tool_customlang_utils::checkout($newlang);
+
 
         // Mark that we are done.
         unset_config('local_email_templates_migrating', '');

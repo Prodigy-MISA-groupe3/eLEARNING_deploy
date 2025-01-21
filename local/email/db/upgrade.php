@@ -684,6 +684,284 @@ function xmldb_local_email_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2024111900, 'local', 'email');
     }
 
+    if ($oldversion < 2025011800) {
+
+        // Define table email_template_strings to be created.
+        $table = new xmldb_table('email_template_strings');
+
+        // Adding fields to table email_template_strings.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('templateid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('lang', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('subject', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('body', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('signature', XMLDB_TYPE_TEXT, null, null, null, null, null);
+
+        // Adding keys to table email_template_strings.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        // Conditionally launch create table for email_template_strings.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table email_templateset_template_strings to be created.
+        $table = new xmldb_table('email_templateset_template_strings');
+
+        // Adding fields to table email_templateset_template_strings.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('templatesetid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('lang', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('subject', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('body', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('signature', XMLDB_TYPE_TEXT, null, null, null, null, null);
+
+        // Adding keys to table email_templateset_template_strings.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        // Conditionally launch create table for email_templateset_template_strings.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Get all of the companies.
+        $companies = $DB->get_records('company');
+        $templates = $DB->get_records_sql("SELECT DISTINCT name FROM {email_template}");
+
+        // Sset up progressbar.
+        $total = count($companies);
+        $progressbar = new progress_bar('migratingcompanytemplates', 500, true);
+        $count = 0;
+
+        $langs = array_keys(get_string_manager()->get_list_of_translations(true));
+
+        core_php_time_limit::raise(HOURSECS);
+        raise_memory_limit(MEMORY_EXTRA);
+
+        foreach ($companies as $company) {
+            // Set the default lang we will be using.
+            $lang = $CFG->lang;
+            if (!empty($company->lang)) {
+                $lang = $company->lang;
+            }
+
+            // Get the set of company default templates.
+            $default = $DB->get_records('email_template', ['companyid' => $company->id, 'lang' => $lang], 'name', 'name,id');
+
+            // Add all of the the entries to the new tables.
+            foreach ($templates as $template) {
+                if (!empty($default[$template->name])) {
+                    $DB->execute("INSERT INTO {email_template_strings} (templateid,lang,subject,body,signature)
+                                  SELECT :id, lang, subject, body, signature
+                                  FROM {email_template}
+                                  WHERE companyid = :companyid
+                                  AND name = :name",
+                                 ['id' => $default[$template->name]->id,
+                                  'companyid' => $company->id,
+                                  'name' => $template->name]);
+                } else {
+                    $missingid = $DB->insert_record('email_template', ['companyid' => $company->id,
+                                                                       'name' => $template->name,
+                                                                       'lang' => $CFG->lang]);
+
+                    foreach ($langs as $missinglang) {
+                        $DB->insert_record('email_template_strings', ['templateid' => $missingid,
+                                                                  'lang' => $missinglang]);
+                    }
+                }
+            }
+
+            // Delete all of the records apart from the ones for this lang.
+            $DB->delete_records_select('email_template',
+                                        "companyid = :companyid AND lang != :lang",
+                                        ['companyid' => $company->id, 'lang' => $lang]);
+            $count++;
+            $progressbar->update($count, $total, "Converting company email templates $count/$total");
+        }
+
+        // Get all of the templatesets.
+        $templatesets = $DB->get_records('email_templateset', [], '', 'id');
+        $lang = $CFG->lang;
+
+        // Set up progressbar.
+        $total = count($templatesets);
+        $progressbar = new progress_bar('migratingtemplatessettemplates', 500, true);
+        $count = 0;
+
+        foreach ($templatesets as $templateset) {
+
+            // Get the set of company default templates.
+            $default = $DB->get_records('email_templateset_templates', ['templateset' => $templateset->id, 'lang' => $lang], 'name', 'name,id');
+
+            // Add all of the the entries to the new tables.
+            foreach ($templates as $template) {
+                if (!empty($default[$template->name])) {
+                    $DB->execute("INSERT INTO {email_templateset_template_strings} (templatesetid,lang,subject,body,signature)
+                                  SELECT :id, lang, subject, body, signature
+                                  FROM {email_templateset_templates}
+                                  WHERE templateset = :templateset
+                                  AND name = :name",
+                                 ['id' => $default[$template->name]->id,
+                                  'templateset' => $templateset->id,
+                                  'name' => $template->name]);
+                } else {
+                    $missingid = $DB->insert_record('email_templateset_templates', ['templateset' => $templateset->id,
+                                                                                    'name' => $template->name,
+                                                                                    'lang' => $CFG->lang]);
+                    foreach ($langs as $missinglang) {
+                        $DB->insert_record('email_templateset_template_strings', ['templatesetid' => $missingid,
+                                                                                  'lang' => $missinglang]);
+                    }
+                }
+            }
+            // Delete all of the records apart from the ones for this lang.
+            $DB->delete_records_select('email_templateset_templates',
+                                       "templateset = :templatesetid AND lang != :lang",
+                                       ['templatesetid' => $templateset->id, 'lang' => $CFG->lang]);
+            $count++;
+            $progressbar->update($count, $total, "Converting templateset email templates $count/$total");
+        }
+
+        // Define index compidnamelang (not unique) to be dropped form email_template.
+        $table = new xmldb_table('email_template');
+        $index = new xmldb_index('compidnamelang', XMLDB_INDEX_NOTUNIQUE, ['companyid', 'name', 'lang']);
+
+        // Conditionally launch drop index compidnamelang.
+        if ($dbman->index_exists($table, $index)) {
+            $dbman->drop_index($table, $index);
+        }
+
+        // Define index compidlang (not unique) to be dropped form email_template.
+        $table = new xmldb_table('email_template');
+        $index = new xmldb_index('compidlang', XMLDB_INDEX_NOTUNIQUE, ['companyid', 'lang']);
+
+        // Conditionally launch drop index compidlang.
+        if ($dbman->index_exists($table, $index)) {
+            $dbman->drop_index($table, $index);
+        }
+
+        // Define field lang to be dropped from email_template.
+        $table = new xmldb_table('email_template');
+        $field = new xmldb_field('lang');
+
+        // Conditionally launch drop field lang.
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+
+        // Define field subject to be dropped from email_template.
+        $table = new xmldb_table('email_template');
+        $field = new xmldb_field('subject');
+
+        // Conditionally launch drop field subject.
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+
+        // Define field body to be dropped from email_template.
+        $table = new xmldb_table('email_template');
+        $field = new xmldb_field('body');
+
+        // Conditionally launch drop field body.
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+
+        // Define field signature to be dropped from email_template.
+        $table = new xmldb_table('email_template');
+        $field = new xmldb_field('signature');
+
+        // Conditionally launch drop field signature.
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+
+        // Define field lang to be dropped from email_templateset_templates.
+        $table = new xmldb_table('email_templateset_templates');
+        $field = new xmldb_field('lang');
+
+        // Conditionally launch drop field lang.
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+
+        // Define field subject to be dropped from email_templateset_templates.
+        $table = new xmldb_table('email_templateset_templates');
+        $field = new xmldb_field('subject');
+
+        // Conditionally launch drop field subject.
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+
+        // Define field body to be dropped from email_templateset_templates.
+        $table = new xmldb_table('email_templateset_templates');
+        $field = new xmldb_field('body');
+
+        // Conditionally launch drop field body.
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+
+        // Define field signature to be dropped from email_templateset_templates.
+        $table = new xmldb_table('email_templateset_templates');
+        $field = new xmldb_field('signature');
+
+        // Conditionally launch drop field signature.
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+
+        // Define key email_templ_strings_tempid (foreign) to be added to email_template_strings.
+        $table = new xmldb_table('email_template_strings');
+        $key = new xmldb_key('email_templ_strings_tempid', XMLDB_KEY_FOREIGN, ['templateid'], 'email_template', ['id']);
+
+        // Launch add key email_templ_strings_tempid.
+        $dbman->add_key($table, $key);
+
+        // Define index email_templ_strings_tempidlang (not unique) to be added to email_template_strings.
+        $table = new xmldb_table('email_template_strings');
+        $index = new xmldb_index('email_templ_strings_tempidlang', XMLDB_INDEX_NOTUNIQUE, ['templateid', 'lang']);
+
+        // Conditionally launch add index email_templ_strings_tempidlang.
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        // Define key email_templset_templ_str_tempid_fk (foreign) to be added to email_templateset_template_strings.
+        $table = new xmldb_table('email_templateset_template_strings');
+        $key = new xmldb_key('email_templset_templ_str_tempid_fk', XMLDB_KEY_FOREIGN, ['templatesetid'], 'email_templateset_templates', ['id']);
+
+        // Launch add key email_templset_templ_str_tempid_fk.
+        $dbman->add_key($table, $key);
+
+        // Define index email_templset_templ_str_tempidlang (not unique) to be added to email_templateset_template_strings.
+        $table = new xmldb_table('email_templateset_template_strings');
+        $index = new xmldb_index('email_templset_templ_str_tempidlang', XMLDB_INDEX_NOTUNIQUE, ['templatesetid', 'lang']);
+
+        // Conditionally launch add index email_templset_templ_str_tempidlang.
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        // Email savepoint reached.
+        upgrade_plugin_savepoint(true, 2025011800, 'local', 'email');
+    }
+
+    if ($oldversion < 2025012000) {
+
+        require_once($CFG->dirroot . '/admin/tool/customlang/locallib.php');
+        $langs = array_keys(get_string_manager()->get_list_of_translations(true));
+
+        // Reload the custom lang table.
+        foreach ($langs as $lang) {
+            tool_customlang_utils::checkout($lang);
+        }
+
+        // Email savepoint reached.
+        upgrade_plugin_savepoint(true, 2025012000, 'local', 'email');
+    }
+
     return $result;
 
 }

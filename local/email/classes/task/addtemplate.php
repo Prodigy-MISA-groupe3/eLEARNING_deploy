@@ -30,6 +30,8 @@ use core\task\adhoc_task;
 use \local_email;
 use tool_customlang_utils;
 
+require_once($CFG->dirroot . '/admin/tool/customlang/locallib.php');
+
 class addtemplate extends adhoc_task {
 
     /**
@@ -63,14 +65,17 @@ class addtemplate extends adhoc_task {
         $templatesets = $DB->get_records('email_templateset', [], 'id', 'id');
 
         foreach ($templatesets as $templateset) {
-            foreach ($langs as $lang) {
-                if (!$DB->get_record('email_templateset_templates', ['templateset' => $templateset->id, 'lang' => $lang, 'name' => $customdata->templatename])) {
-                    $templaterec = (object) [];
-                    $templaterec->templateset = $templateset->id;
-                    $templaterec->name = $customdata->templatename;
-                    $templaterec->lang = $lang;
-                    $templaterec->disabled = $customdata->disabled;
-                    $DB->insert_record('email_templateset_templates', $templaterec);
+            if (!$DB->get_record('email_templateset_templates', ['templateset' => $templateset->id, 'lang' => $lang, 'name' => $customdata->templatename])) {
+                $templaterec = (object) [];
+                $templaterec->templateset = $templateset->id;
+                $templaterec->name = $customdata->templatename;
+                $templaterec->disabled = $customdata->disabled;
+                $templateid = $DB->insert_record('email_templateset_templates', $templaterec);
+                foreach ($langs as $lang) {
+                    $templatelangrec = (object) [];
+                    $templatelangrec->templatesetid = $templateid;
+                    $templatelangrec->lang = $lang;
+                    $DB->insert_record('email_templateset_template_strings', $templaterec);
                 }
             }
         }
@@ -79,14 +84,17 @@ class addtemplate extends adhoc_task {
         $companies = $DB->get_records('company', [], 'id', 'id');
 
         foreach ($companies as $company) {
-            foreach ($langs as $lang) {
-                if (!$DB->get_record('email_template', ['companyid' => $company->id, 'lang' => $lang, 'name' => $customdata->templatename])) {
-                    $templaterec = (object) [];
-                    $templaterec->companyid = $company->id;
-                    $templaterec->name = $customdata->templatename;
+            if (!$DB->get_record('email_template', ['companyid' => $company->id, 'lang' => $lang, 'name' => $customdata->templatename])) {
+                $templaterec = (object) [];
+                $templaterec->companyid = $company->id;
+                $templaterec->name = $customdata->templatename;
+                $templaterec->disabled = $customdata->disabled;
+                $templateid = $DB->insert_record('email_template', $templaterec);
+                foreach ($langs as $lang) {
+                    $templatelangrec = (object) [];
+                    $templaterec->templateid = $templateid;
                     $templaterec->lang = $lang;
-                    $templaterec->disabled = $customdata->disabled;
-                    $DB->insert_record('email_template', $templaterec);
+                    $DB->insert_record('email_template_strings', $templaterec);
                 }
             }
         }
@@ -94,7 +102,9 @@ class addtemplate extends adhoc_task {
         require_once(dirname(__FILE__) . '/../../../../admin/tool/customlang/locallib.php');
 
         // Reload the custom lang table.
-        tool_customlang_utils::checkout($CFG->lang);
+        foreach ($langs as $lang) {
+            tool_customlang_utils::checkout($lang);
+        }
 
         // Mark that we are done.
         unset_config('local_email_templates_migrating', '');
