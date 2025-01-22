@@ -76,6 +76,7 @@ $string['missingtemplatesetname'] = 'Please enter a template set name';
 $string['monthly'] = 'Monthly';
 $string['override'] = 'override';
 $string['pluginname'] = 'Local: Email';
+$string['refreshlangpacks'] = 'Import lang pack string to tool_customlang';
 $string['replyto'] = 'Reply to';
 $string['replytoother'] = 'Manual Reply to';
 $string['resettemplatefull'] = 'Do you want to reset the template for {$a} back to the default settings and language strings for the selected language?';
