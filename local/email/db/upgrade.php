@@ -962,6 +962,25 @@ function xmldb_local_email_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025012000, 'local', 'email');
     }
 
+    if ($oldversion < 2025012002) {
+
+        // Need to delete any strings for unused templates.
+        $deletetemplates = ['completion_warn_manager', 'course_completed_manager', 'expire_manager', 'expiry_warn_manager', 'license_reminder'];
+        foreach ($deletetemplates as $deletename) {
+            $DB->delete_records('email_template', ['name' => $deletename]);
+            $DB->delete_records('email_templateset_templates', ['name' => $deletename]);
+            $DB->execute("DELETE FROM {email_template_strings}
+                          WHERE templateid NOT IN
+                          (SELECT id FROM {email_template})");
+            $DB->execute("DELETE FROM {email_templateset_template_strings}
+                          WHERE templatesetid NOT IN
+                          (SELECT id FROM {email_templateset_templates})");
+        }
+
+        // Email savepoint reached.
+        upgrade_plugin_savepoint(true, 2025012002, 'local', 'email');
+    }
+
     return $result;
 
 }
