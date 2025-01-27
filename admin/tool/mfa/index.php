@@ -33,10 +33,19 @@ require_capability('moodle/site:config', context_system::instance());
 
 $returnurl = get_local_referer(false);
 
+// IOMAD
+require_once($CFG->dirroot . '/local/iomad/lib/company.php');
+$companyid = iomad::get_my_companyid(context_system::instance(), false);
+if (!empty($companyid)) {
+    $postfix = "_$companyid";
+} else {
+    $postfix = "";
+}
+
 $PAGE->set_url('/admin/tool/mfa/index.php');
 
 $action = optional_param('action', '', PARAM_ALPHANUMEXT);
-$factor = optional_param('plugin', '', PARAM_ALPHANUMEXT);
+$factor = optional_param('factor', '', PARAM_ALPHANUMEXT);
 
 if (empty($factor) || !\tool_mfa\plugininfo\factor::factor_exists($factor)) {
     throw new moodle_exception('factornotfound', 'tool_mfa', $returnurl, $factor);
@@ -48,20 +57,47 @@ if (empty($action) || !in_array($action, \tool_mfa\plugininfo\factor::get_factor
 
 require_sesskey();
 
-$class = \core_plugin_manager::resolve_plugininfo_class('factor');
+$enabledfactors = [];
+foreach (\tool_mfa\plugininfo\factor::get_enabled_factors() as $enabledfactor) {
+    $enabledfactors[] = $enabledfactor->name;
+}
+
+// Set teh postfix.
+$enabledname = "enabled" . $postfix;
 
 switch ($action) {
     case 'disable':
-        $class::enable_plugin($factor, 0);
+        if (in_array($factor, $enabledfactors)) {
+            \tool_mfa\manager::set_factor_config([$enabledname => 0], 'factor_' . $factor);
+            \tool_mfa\manager::do_factor_action($factor, $action);
+
+            \core\session\manager::gc(); // Remove stale sessions.
+            core_plugin_manager::reset_caches();
+        }
         break;
+
     case 'enable':
-        $class::enable_plugin($factor, 1);
+        if (!in_array($factor, $enabledfactors)) {
+            \tool_mfa\manager::set_factor_config([$enabledname => 1], 'factor_' . $factor);
+            \tool_mfa\manager::do_factor_action($factor, $action);
+            if (!empty($postfix)) {
+                company::update_plugin('factor_' . $factor, $postfix);
+            }
+
+            core_plugin_manager::reset_caches();
+            \core\session\manager::gc(); // Remove stale sessions.
+        }
         break;
+
     case 'up':
-        $class::change_plugin_order($factor, $class::MOVE_UP);
-        break;
     case 'down':
-        $class::change_plugin_order($factor, $class::MOVE_DOWN);
+        \tool_mfa\manager::do_factor_action($factor, $action);
+
+        \core\session\manager::gc(); // Remove stale sessions.
+        core_plugin_manager::reset_caches();
+        break;
+
+    default:
         break;
 }
 
