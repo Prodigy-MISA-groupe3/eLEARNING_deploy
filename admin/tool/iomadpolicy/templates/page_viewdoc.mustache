@@ -45,11 +45,11 @@
 
 <a id="top"></a>
 <div class="clearfix">
-    <div class="float-left">
+    <div class="float-start">
         <h2>{{{iomadpolicy.name}}}</h2>
     </div>
     {{# numiomadpolicy }}
-        <div class="float-right">
+        <div class="float-end">
             {{# str }} steppolicies, tool_iomadpolicy,
                 { "numiomadpolicy": {{# quote }}{{numiomadpolicy}}{{/quote }}, "totalpolicies": {{# quote }}{{totalpolicies}}{{/ quote }} }
             {{/ str }}
@@ -96,7 +96,7 @@
         <a role="button" href="{{declineurl}}" class="btn btn-link">{{#str}} idontagree, tool_iomadpolicy, {{{iomadpolicy.name}}} {{/str}}</a>
     {{/declineurl}}
 
-    <div class="float-right">
+    <div class="float-end">
         <a href="#top">
             {{# str }} backtotop, tool_iomadpolicy {{/ str }}
             <i class="icon text-primary fa fa-caret-up" title="{{# str }} backtotop, tool_iomadpolicy {{/ str }}" ></i>

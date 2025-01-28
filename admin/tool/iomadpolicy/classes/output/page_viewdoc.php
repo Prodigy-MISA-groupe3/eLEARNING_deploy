@@ -57,6 +57,15 @@ class page_viewdoc implements renderable, templatable {
     /** @var int User id who wants to view this page. */
     protected $behalfid = null;
 
+    /** @var bool View the iomadpolicy as a part of the management UI. */
+    protected $manage;
+
+    /** @var int Position of the current iomadpolicy with respect to the total of iomadpolicy docs to display. */
+    protected $numiomadpolicy = 0;
+
+    /** @var int Total number of iomadpolicy documents which the user has to agree to. */
+    protected $totalpolicies = 0;
+
     /**
      * Prepare the page for rendering.
      *

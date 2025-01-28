@@ -157,10 +157,10 @@ function tool_iomadpolicy_pluginfile($course, $cm, $context, $filearea, $args, $
 function tool_iomadpolicy_get_fontawesome_icon_map() {
     return [
         'tool_iomadpolicy:agreed' => 'fa-check text-success',
-        'tool_iomadpolicy:declined' => 'fa-times text-danger',
-        'tool_iomadpolicy:pending' => 'fa-clock-o text-warning',
-        'tool_iomadpolicy:partial' => 'fa-exclamation-triangle text-warning',
-        'tool_iomadpolicy:level' => 'fa-level-up fa-rotate-90 text-muted',
+        'tool_iomadpolicy:declined' => 'fa-xmark text-danger',
+        'tool_iomadpolicy:level' => 'fa-turn-up fa-rotate-90 text-muted',
+        'tool_iomadpolicy:partial' => 'fa-triangle-exclamation text-warning',
+        'tool_iomadpolicy:pending' => 'fa-regular fa-clock text-warning',
     ];
 }
 

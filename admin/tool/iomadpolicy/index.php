@@ -65,6 +65,7 @@ $PAGE->set_popup_notification_allowed(false);
 if (array_diff($agreedocs, $listdocs) || array_diff($declinedocs, $listdocs)) {
     throw new moodle_exception('invalidaccessparameter');
 }
+
 if (isloggedin() && !isguestuser()) {
     // Existing user.
     $haspermissionagreedocs = api::can_accept_policies($listdocs, $behalfid);
@@ -75,6 +76,7 @@ if (isloggedin() && !isguestuser()) {
 
 if (!$haspermissionagreedocs) {
     $outputpage = new \tool_iomadpolicy\output\page_nopermission($listdocs, $behalfid);
+} else if ($cancel) {
     redirect(new moodle_url('/'));
 } else {
     if (!$behalfid && \core\session\manager::is_loggedinas()) {
