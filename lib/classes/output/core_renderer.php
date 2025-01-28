@@ -50,6 +50,7 @@ use navigation_node;
 use rating;
 use rating_manager;
 use stdClass;
+use iomad;
 use HTML_QuickForm_element;
 
 /**
