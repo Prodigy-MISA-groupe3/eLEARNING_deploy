@@ -78,10 +78,21 @@ class api {
      */
     public static function get_current_versions_ids($audience = null) {
         global $DB;
+
+        // Get the companyid.
+        $companyid = iomad::get_my_companyid(context_system::instance(), false);
+        $companysql = "";
+        if (!empty($companyid)) {
+            if ($DB->record_exists('tool_iomadpolicy', ['companyid' => $companyid])) {
+                $companysql = " AND d.companyid = $companyid";
+            }
+        }
+
         $sql = "SELECT v.iomadpolicyid, v.id
              FROM {tool_iomadpolicy} d
              LEFT JOIN {tool_iomadpolicy_versions} v ON v.iomadpolicyid = d.id
-             WHERE d.currentversionid = v.id";
+             WHERE d.currentversionid = v.id
+             $companysql";
         $params = [];
         if ($audience) {
             $sql .= " AND v.audience IN (?, ?)";
@@ -109,11 +120,7 @@ class api {
         }
 
         // Deal with the company id.
-        if ($companyid > 0) {
-            $companysql = "AND d.companyid = :companyid";
-        } else {
-            $companysql = "";
-        }
+        $companysql = "AND d.companyid = :companyid";
 
         $sql .= " FROM {tool_iomadpolicy} d
              LEFT JOIN {tool_iomadpolicy_versions} v ON v.iomadpolicyid = d.id ";
@@ -219,8 +226,14 @@ class api {
      * @return stdClass - exported {@link tool_iomadpolicy\iomadpolicy_exporter} instance
      */
     public static function get_iomadpolicy_version($versionid, $policies = null) {
+        global $DB;
+
         if ($policies === null) {
-            $policies = self::list_policies(null, false, -1);
+            $companyid = iomad::get_my_companyid(context_system::instance(), false);
+            if (!$DB->record_exists('tool_iomadpolicy', ['companyid' => $companyid])) {
+                $companyid = 0;
+            }
+            $policies = self::list_policies(null, false, $companyid);
         }
         foreach ($policies as $iomadpolicy) {
             if ($iomadpolicy->currentversionid == $versionid) {
