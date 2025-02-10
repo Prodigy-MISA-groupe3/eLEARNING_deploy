@@ -62,12 +62,16 @@ class page_managedocs_list implements renderable, templatable {
      * page_managedocs_list constructor.
      * @param int $iomadpolicyid when specified only archived versions of this iomadpolicy will be displayed.
      */
-    public function __construct($iomadpolicyid = null) {
+    public function __construct($iomadpolicyid = null, $companyonly = false) {
         $this->companylist = company::get_companies_select(false);
         $this->iomadpolicyid = $iomadpolicyid;
+        $this->companyonly = $companyonly;
         $this->returnurl = new moodle_url('/admin/tool/iomadpolicy/managedocs.php');
         if ($this->iomadpolicyid) {
             $this->returnurl->param('archived', $this->iomadpolicyid);
+        }
+        if ($this->companyonly) {
+            $this->returnurl->param('companyonly', $this->companyonly);
         }
     }
 
@@ -83,6 +87,7 @@ class page_managedocs_list implements renderable, templatable {
         $data->pluginbaseurl = (new moodle_url('/admin/tool/iomadpolicy'))->out(false);
         $data->canmanage = has_capability('tool/iomadpolicy:managedocs', \context_system::instance());
         $data->canaddnew = $data->canmanage && !$this->iomadpolicyid;
+        $data->editlinkurl = (new moodle_url('/admin/tool/iomadpolicy/editiomadpolicydoc.php', ['companyonly' => $this->companyonly]))->out(false);
         $data->canviewacceptances = has_capability('tool/iomadpolicy:viewacceptances', \context_system::instance());
         $data->title = get_string('policiesagreements', 'tool_iomadpolicy');
         $data->policies = [];

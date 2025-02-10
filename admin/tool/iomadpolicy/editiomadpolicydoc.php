@@ -36,10 +36,25 @@ $delete = optional_param('delete', null, PARAM_INT);
 $confirm = optional_param('confirm', false, PARAM_BOOL);
 $moveup = optional_param('moveup', null, PARAM_INT);
 $movedown = optional_param('movedown', null, PARAM_INT);
+$companyonly = optional_param('companyonly', false, PARAM_BOOL);
 
-admin_externalpage_setup('tool_iomadpolicy_managedocs', '', ['iomadpolicyid' => $iomadpolicyid, 'versionid' => $versionid],
-    new moodle_url('/admin/tool/iomadpolicy/editiomadpolicydoc.php'));
-require_capability('tool/iomadpolicy:managedocs', context_system::instance());
+require_once($CFG->dirroot . '/local/iomad/lib/company.php');
+$companyid = iomad::get_my_companyid(context_system::instance(), false);
+if ($companyonly && !empty($companyid)) {
+    $companycontext = \core\context\company::instance($companyid);
+    $PAGE->set_url(new moodle_url($CFG->wwwroot . '/admin/tool/iomadpolicy/managedocs.php', ['companyonly' => $companyonly]));
+    $PAGE->set_context($companycontext);
+    $PAGE->set_heading(get_string('pluginname', 'tool_iomadpolicy'));
+    $PAGE->set_title(get_string('pluginname', 'tool_iomadpolicy'));
+
+    //iomad::require_capability('block/iomad_company_admin:configiomadoidc', $companycontext);
+    $PAGE->set_pagelayout('base');
+    $returnurl = new moodle_url('/blocks/iomad_company_admin/company_advanced_settings.php');
+} else {
+    admin_externalpage_setup('tool_iomadpolicy_managedocs', '', ['iomadpolicyid' => $iomadpolicyid, 'versionid' => $versionid],
+        new moodle_url('/admin/tool/iomadpolicy/editiomadpolicydoc.php'));
+    require_capability('tool/iomadpolicy:managedocs', context_system::instance());
+}
 
 $output = $PAGE->get_renderer('tool_iomadpolicy');
 $PAGE->navbar->add(get_string('editingiomadpolicydocument', 'tool_iomadpolicy'));
@@ -50,7 +65,7 @@ if ($makecurrent) {
     if ($confirm) {
         require_sesskey();
         api::make_current($makecurrent);
-        redirect(new moodle_url('/admin/tool/iomadpolicy/managedocs.php'));
+        redirect(new moodle_url('/admin/tool/iomadpolicy/managedocs.php', ['companyonly' => $companyonly]));
     }
 
     echo $output->header();
@@ -60,8 +75,8 @@ if ($makecurrent) {
             'name' => format_string($version->name),
             'revision' => format_string($version->revision),
         ]),
-        new moodle_url($PAGE->url, ['makecurrent' => $makecurrent, 'confirm' => 1]),
-        new moodle_url('/admin/tool/iomadpolicy/managedocs.php')
+        new moodle_url($PAGE->url, ['makecurrent' => $makecurrent, 'confirm' => 1, 'companyonly' => $companyonly]),
+        new moodle_url('/admin/tool/iomadpolicy/managedocs.php', ['companyonly' => $companyonly])
     );
     echo $output->footer();
     die();
@@ -71,13 +86,13 @@ if ($inactivate) {
     $policies = api::list_policies([$inactivate]);
 
     if (empty($policies[0]->currentversionid)) {
-        redirect(new moodle_url('/admin/tool/iomadpolicy/managedocs.php'));
+        redirect(new moodle_url('/admin/tool/iomadpolicy/managedocs.php', ['companyonly' => $companyonly]));
     }
 
     if ($confirm) {
         require_sesskey();
         api::inactivate($inactivate);
-        redirect(new moodle_url('/admin/tool/iomadpolicy/managedocs.php'));
+        redirect(new moodle_url('/admin/tool/iomadpolicy/managedocs.php', ['companyonly' => $companyonly]));
     }
 
     echo $output->header();
@@ -87,8 +102,8 @@ if ($inactivate) {
             'name' => format_string($policies[0]->currentversion->name),
             'revision' => format_string($policies[0]->currentversion->revision),
         ]),
-        new moodle_url($PAGE->url, ['inactivate' => $inactivate, 'confirm' => 1]),
-        new moodle_url('/admin/tool/iomadpolicy/managedocs.php')
+        new moodle_url($PAGE->url, ['inactivate' => $inactivate, 'confirm' => 1, 'companyonly' => $companyonly]),
+        new moodle_url('/admin/tool/iomadpolicy/managedocs.php', ['companyonly' => $companyonly])
     );
     echo $output->footer();
     die();
@@ -100,7 +115,7 @@ if ($delete) {
     if ($confirm) {
         require_sesskey();
         api::delete($delete);
-        redirect(new moodle_url('/admin/tool/iomadpolicy/managedocs.php'));
+        redirect(new moodle_url('/admin/tool/iomadpolicy/managedocs.php', ['companyonly' => $companyonly]));
     }
 
     echo $output->header();
@@ -110,8 +125,8 @@ if ($delete) {
             'name' => format_string($version->name),
             'revision' => format_string($version->revision),
         ]),
-        new moodle_url($PAGE->url, ['delete' => $delete, 'confirm' => 1]),
-        new moodle_url('/admin/tool/iomadpolicy/managedocs.php')
+        new moodle_url($PAGE->url, ['delete' => $delete, 'confirm' => 1, 'companyonly' => $companyonly]),
+        new moodle_url('/admin/tool/iomadpolicy/managedocs.php', ['companyonly' => $companyonly])
     );
     echo $output->footer();
     die();
@@ -126,7 +141,7 @@ if ($moveup || $movedown) {
         api::move_down($movedown);
     }
 
-    redirect(new moodle_url('/admin/tool/iomadpolicy/managedocs.php'));
+    redirect(new moodle_url('/admin/tool/iomadpolicy/managedocs.php', ['companyonly' => $companyonly]));
 }
 
 if (!$versionid && $iomadpolicyid) {
@@ -134,7 +149,7 @@ if (!$versionid && $iomadpolicyid) {
         $iomadpolicy = $policies[0];
         $iomadpolicyversion = new iomadpolicy_version($iomadpolicy->currentversionid);
     } else {
-        redirect(new moodle_url('/admin/tool/iomadpolicy/managedocs.php'));
+        redirect(new moodle_url('/admin/tool/iomadpolicy/managedocs.php', ['companyonly' => $companyonly]));
     }
 } else {
     $iomadpolicyversion = new iomadpolicy_version($versionid);
@@ -191,7 +206,7 @@ if ($form->is_cancelled()) {
     if ($data->status == iomadpolicy_version::STATUS_ACTIVE) {
         api::make_current($iomadpolicyversion->get('id'));
     }
-    redirect(new moodle_url('/admin/tool/iomadpolicy/managedocs.php'));
+    redirect(new moodle_url('/admin/tool/iomadpolicy/managedocs.php', ['companyonly' => $companyonly]));
 
 } else {
     echo $output->header();

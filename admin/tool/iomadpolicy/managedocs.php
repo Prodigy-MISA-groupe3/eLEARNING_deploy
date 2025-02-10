@@ -30,19 +30,38 @@ require_once($CFG->libdir.'/adminlib.php');
 
 $archived = optional_param('archived', 0, PARAM_INT);
 $import = optional_param('import', 0, PARAM_INT);
+$companyonly = optional_param('companyonly', false, PARAM_BOOL);
 
 if ($import && has_capability('tool/iomadpolicy:managedocs', \context_system::instance())) {
     if (!$DB->get_records('tool_iomadpolicy')) {
         tool_iomadpolicy\api::import_policies();
     }
 }
+
+require_once($CFG->dirroot . '/local/iomad/lib/company.php');
+$companyid = iomad::get_my_companyid(context_system::instance(), false);
+
 require_login();
 
-admin_externalpage_setup('tool_iomadpolicy_managedocs', '', ['archived' => $archived]);
+if ($companyonly && !empty($companyid)) {
+    $companycontext = \core\context\company::instance($companyid);
+    $PAGE->set_url(new moodle_url($CFG->wwwroot . '/admin/tool/iomadpolicy/managedocs.php', ['companyonly' => $companyonly]));
+    $PAGE->set_context($companycontext);
+    $PAGE->set_heading(get_string('pluginname', 'tool_iomadpolicy'));
+    $PAGE->set_title(get_string('pluginname', 'tool_iomadpolicy'));
+
+    //iomad::require_capability('block/iomad_company_admin:configiomadoidc', $companycontext);
+    $PAGE->set_pagelayout('base');
+    $returnurl = new moodle_url('/blocks/iomad_company_admin/company_advanced_settings.php');
+} else {
+    admin_externalpage_setup('tool_iomadpolicy_managedocs', '', ['archived' => $archived]);
+    require_admin();
+    $returnurl = $url;
+}
 
 $output = $PAGE->get_renderer('tool_iomadpolicy');
 
-$manpage = new \tool_iomadpolicy\output\page_managedocs_list($archived);
+$manpage = new \tool_iomadpolicy\output\page_managedocs_list($archived, $companyonly);
 
 echo $output->header();
 echo $output->render($manpage);

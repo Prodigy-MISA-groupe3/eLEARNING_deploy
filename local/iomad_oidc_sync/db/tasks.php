@@ -15,15 +15,24 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * @package   block_iomad_company_admin
- * @copyright 2021 Derick Turner
+ * @package   local_iomad_oidc_sync
+ * @category  tasks
+ * @copyright 2024 Derick Turner
  * @author    Derick Turner
+ * Based on code provided by Jacob Kindle @ Cofense https://cofense.com/
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->release  = '4.3.8 (Build: 20241007)'; // Human-friendly version name
-$plugin->version  = 2025021000;   // The (date) version of this plugin.
-$plugin->requires = 2024100700;   // Requires this Moodle version.
-$plugin->component  = 'block_iomad_company_admin';
+$tasks = [
+    [
+        'classname' => 'local_iomad_oidc_sync\task\oidc_sync_task',
+        'blocking' => 0,
+        'minute' => '0',
+        'hour' => '0',
+        'day' => '*',
+        'month' => '*',
+        'dayofweek' => '*'
+    ],
+];
