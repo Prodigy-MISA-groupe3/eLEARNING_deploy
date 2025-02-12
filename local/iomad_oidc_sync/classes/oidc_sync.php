@@ -127,6 +127,11 @@ class oidc_sync {
         $foundusers = [];
 
         mtrace("Processing " . count($users) . " users from OIDC connection");
+        
+        // Need to set up the company so we can check it's ok to add new users.
+        $company = new company($companyid);
+        $hitlimit = false;
+
         // Process the users.
         foreach ($users as $aduser) {
             $userrec = (object) [];
@@ -138,6 +143,10 @@ class oidc_sync {
 
             // Only want to add new users.
             if (!$founduser = $DB->get_record('user', (array) $userrec)) {
+                if (!$company->check_usercount(1)) {
+                   $hitlimit = true;
+                   continue;                   
+                }
                 if ($CFG->debug > DEBUG_NONE) {
                     mtrace("Creating user $userrec->username");
                 }
@@ -182,6 +191,11 @@ class oidc_sync {
                 // Store this for later.
                 $foundusers[] = $founduser->id;
             }
+        }
+
+        // Did we hit the maximum?
+        if ($hitlimit) {
+            mtrace("No more users added due to reaching allowed maximum for the company");
         }
 
         // Are we doing anything else?
@@ -331,11 +345,14 @@ class oidc_sync {
             } else {
                 // Decode the response
                 $responseArray = json_decode($response, true);
-                if (isset($responseArray['value'])) {
+                if (isset($responseArray['error'])) {
+                    mtrace("Response error - " . $responseArray['error']['code'] . ": " . $responseArray['error']['message']);
+                    $process = false;
+                } else if (isset($responseArray['value'])) {
                     $userlist = array_merge(array_values($userlist), array_values($responseArray['value']));
-                }
-                if (isset($responseArray['@odata.nextLink'])) {
-                    $graphurl = $responseArray['@odata.nextLink'];
+                    if (isset($responseArray['@odata.nextLink'])) {
+                        $graphurl = $responseArray['@odata.nextLink'];
+                    }
                 } else {
                     $process = false;
                 }

@@ -86,8 +86,8 @@ class tenantnameorguid extends dynamic_form {
         }
 
         // Make the changes.
-        $companyrec->tenantnameorguid = $data->tenantnameorguid;
-        $companyrec->syncgroupid = $data->syncgroupid;
+        $companyrec->tenantnameorguid = trim($data->tenantnameorguid);
+        $companyrec->syncgroupid = trim($data->syncgroupid);
         $companyrec->useroption = $data->useroption;
         $companyrec->unsuspendonsync = $data->unsuspendonsync;
 
