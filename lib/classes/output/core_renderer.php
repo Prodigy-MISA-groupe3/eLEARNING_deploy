@@ -3521,7 +3521,7 @@ EOD;
         // IOMAD
         $systemcontext = \context_system::instance();
         $companyid = iomad::get_my_companyid($systemcontext, false);
-        if (!empty($companyid)) {
+        if (!empty($companyid) && $companyid > 0) {
             $companycontext = \core\context\company::instance($companyid);
         } else {
             $companycontext = $systemcontext;
