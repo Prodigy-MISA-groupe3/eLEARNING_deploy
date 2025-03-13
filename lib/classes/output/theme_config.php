@@ -509,6 +509,7 @@ class theme_config {
             'scss', 'extrascsscallback', 'prescsscallback', 'csstreepostprocessor', 'addblockposition',
             'iconsystem', 'precompiledcsscallback', 'haseditswitch', 'usescourseindex', 'activityheaderconfig',
             'removedprimarynavitems',
+            'isiomadtheme',
         ];
 
         foreach ($config as $key => $value) {
