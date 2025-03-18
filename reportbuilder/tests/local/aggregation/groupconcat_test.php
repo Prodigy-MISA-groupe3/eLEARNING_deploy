@@ -20,16 +20,11 @@ namespace core_reportbuilder\local\aggregation;
 
 use core_badges_generator;
 use core_badges\reportbuilder\datasource\badges;
-use core_reportbuilder_testcase;
 use core_reportbuilder_generator;
 use core_reportbuilder\manager;
+use core_reportbuilder\tests\core_reportbuilder_testcase;
 use core_user\reportbuilder\datasource\users;
 use stdClass;
-
-defined('MOODLE_INTERNAL') || die();
-
-global $CFG;
-require_once("{$CFG->dirroot}/reportbuilder/tests/helpers.php");
 
 /**
  * Unit tests for group concatenation aggregation
@@ -40,7 +35,7 @@ require_once("{$CFG->dirroot}/reportbuilder/tests/helpers.php");
  * @copyright   2021 Paul Holden <paulh@moodle.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class groupconcat_test extends core_reportbuilder_testcase {
+final class groupconcat_test extends core_reportbuilder_testcase {
 
     /**
      * Test aggregation when applied to column
@@ -71,6 +66,44 @@ class groupconcat_test extends core_reportbuilder_testcase {
         $content = $this->get_custom_report_content($report->get('id'));
         $this->assertEquals([
             ['Bob', 'Apple, Banana, Banana'],
+            ['Admin', 'User'],
+        ], array_map('array_values', $content));
+    }
+
+    /**
+     * Test aggregation with custom separator option when applied to column
+     */
+    public function test_column_aggregation_separator_option(): void {
+        $this->resetAfterTest();
+
+        // Test subjects.
+        $this->getDataGenerator()->create_user(['firstname' => 'Bob', 'lastname' => 'Banana']);
+        $this->getDataGenerator()->create_user(['firstname' => 'Bob', 'lastname' => 'Apple']);
+        $this->getDataGenerator()->create_user(['firstname' => 'Bob', 'lastname' => 'Banana']);
+
+        /** @var core_reportbuilder_generator $generator */
+        $generator = $this->getDataGenerator()->get_plugin_generator('core_reportbuilder');
+        $report = $generator->create_report(['name' => 'Users', 'source' => users::class, 'default' => 0]);
+
+        // Report columns, aggregated/sorted by user lastname.
+        $generator->create_column(['reportid' => $report->get('id'), 'uniqueidentifier' => 'user:firstname']);
+        $generator->create_column([
+            'reportid' => $report->get('id'),
+            'uniqueidentifier' => 'user:lastname',
+            'aggregation' => groupconcat::get_class_name(),
+            'sortenabled' => 1,
+            'sortdirection' => SORT_ASC,
+        ]);
+
+        // Set aggregation option for separator.
+        $instance = manager::get_report_from_persistent($report);
+        $instance->get_column('user:lastname')
+            ->set_aggregation_options(groupconcat::get_class_name(), ['separator' => '<br />']);
+
+        // Assert lastname column was aggregated, with defined separator between each item.
+        $content = $this->get_custom_report_content($report->get('id'));
+        $this->assertEquals([
+            ['Bob', 'Apple<br />Banana<br />Banana'],
             ['Admin', 'User'],
         ], array_map('array_values', $content));
     }
@@ -139,15 +172,9 @@ class groupconcat_test extends core_reportbuilder_testcase {
         // Assert confirmed column was aggregated, and sorted predictably with callback applied.
         $content = $this->get_custom_report_content($report->get('id'));
         $this->assertEquals([
-            [
-                'c0_firstname' => 'Admin',
-                'c1_confirmed' => 'Yes (groupconcat)',
-            ],
-            [
-                'c0_firstname' => 'Bob',
-                'c1_confirmed' => 'No (groupconcat), Yes (groupconcat), Yes (groupconcat)',
-            ],
-        ], $content);
+            ['Admin', 'Yes (groupconcat)'],
+            ['Bob', 'No (groupconcat), Yes (groupconcat), Yes (groupconcat)'],
+        ], array_map('array_values', $content));
     }
 
     /**
@@ -188,14 +215,8 @@ class groupconcat_test extends core_reportbuilder_testcase {
         // Assert description column was aggregated, with callbacks accounting for null values.
         $content = $this->get_custom_report_content($report->get('id'));
         $this->assertEquals([
-            [
-                'c0_name' => $badgeone->name,
-                'c1_description' => "{$userone->description}, {$usertwo->description}",
-            ],
-            [
-                'c0_name' => $badgetwo->name,
-                'c1_description' => '',
-            ],
-        ], $content);
+            [$badgeone->name, "{$userone->description}, {$usertwo->description}"],
+            [$badgetwo->name, ''],
+        ], array_map('array_values', $content));
     }
 }

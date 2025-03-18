@@ -18,19 +18,10 @@ declare(strict_types=1);
 
 namespace core_course\reportbuilder\datasource;
 
-use context_course;
-use core_reportbuilder_testcase;
+use core\context\course;
 use core_reportbuilder_generator;
-use core_reportbuilder\local\filters\boolean_select;
-use core_reportbuilder\local\filters\date;
-use core_reportbuilder\local\filters\select;
-use core_reportbuilder\local\filters\tags;
-use core_reportbuilder\local\filters\text;
-
-defined('MOODLE_INTERNAL') || die();
-
-global $CFG;
-require_once("{$CFG->dirroot}/reportbuilder/tests/helpers.php");
+use core_reportbuilder\local\filters\{boolean_select, date, select, tags, text};
+use core_reportbuilder\tests\core_reportbuilder_testcase;
 
 /**
  * Unit tests for courses datasources
@@ -40,7 +31,7 @@ require_once("{$CFG->dirroot}/reportbuilder/tests/helpers.php");
  * @copyright   2021 Paul Holden <paulh@moodle.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class courses_test extends core_reportbuilder_testcase {
+final class courses_test extends core_reportbuilder_testcase {
 
     /**
      * Test default datasource
@@ -91,13 +82,14 @@ class courses_test extends core_reportbuilder_testcase {
             'category' => $category->id,
             'fullname' => 'Cats',
             'summary' => 'Course description',
+            'lang' => 'en',
             'theme' => 'boost',
             'tags' => ['Horses'],
         ]);
 
         // Add a course image.
         get_file_storage()->create_file_from_string([
-            'contextid' => context_course::instance($course->id)->id,
+            'contextid' => course::instance($course->id)->id,
             'component' => 'course',
             'filearea' => 'overviewfiles',
             'itemid' => 0,
@@ -170,8 +162,8 @@ class courses_test extends core_reportbuilder_testcase {
         $this->assertEquals('Yes', $coursevisible);
         $this->assertEquals('No groups', $coursegroupmode);
         $this->assertEquals('No', $coursegroupmodeforce);
-        $this->assertEmpty($courselang);
-        $this->assertEmpty($coursecalendar);
+        $this->assertEquals('English ‎(en)‎', $courselang);
+        $this->assertEquals('Do not force', $coursecalendar);
         $this->assertEquals('Boost', $coursetheme);
         $this->assertEquals('No', $coursecompletion);
         $this->assertEmpty($coursedownload);
@@ -228,7 +220,7 @@ class courses_test extends core_reportbuilder_testcase {
      *
      * @return array[]
      */
-    public function datasource_filters_provider(): array {
+    public static function datasource_filters_provider(): array {
         return [
             // Category.
             'Filter category name' => ['course_category:text', [
@@ -282,7 +274,7 @@ class courses_test extends core_reportbuilder_testcase {
             ], true],
             'Filter course format (no match)' => ['course:format', [
                 'course:format_operator' => select::EQUAL_TO,
-                'course:format_value' => 'weekly',
+                'course:format_value' => 'weeks',
             ], false],
             'Filter course startdate' => ['course:startdate', [
                 'course:startdate_operator' => date::DATE_RANGE,
@@ -324,7 +316,7 @@ class courses_test extends core_reportbuilder_testcase {
             ], true],
             'Filter course lang (no match)' => ['course:lang', [
                 'course:lang_operator' => select::EQUAL_TO,
-                'course:lang_value' => 'de',
+                'course:lang_value' => '',
             ], false],
             'Filter course calendartype' => ['course:calendartype', [
                 'course:calendartype_operator' => select::EQUAL_TO,
@@ -332,7 +324,7 @@ class courses_test extends core_reportbuilder_testcase {
             ], true],
             'Filter course calendartype (no match)' => ['course:calendartype', [
                 'course:calendartype_operator' => select::EQUAL_TO,
-                'course:calendartype_value' => 'hijri',
+                'course:calendartype_value' => '',
             ], false],
             'Filter course theme' => ['course:theme', [
                 'course:theme_operator' => select::EQUAL_TO,
@@ -416,7 +408,7 @@ class courses_test extends core_reportbuilder_testcase {
         $generator = $this->getDataGenerator()->get_plugin_generator('core_reportbuilder');
 
         // Create report containing single column, and given filter.
-        $report = $generator->create_report(['name' => 'Tasks', 'source' => courses::class, 'default' => 0]);
+        $report = $generator->create_report(['name' => 'Courses', 'source' => courses::class, 'default' => 0]);
         $generator->create_column(['reportid' => $report->get('id'), 'uniqueidentifier' => 'course:fullname']);
 
         // Add filter, set it's values.

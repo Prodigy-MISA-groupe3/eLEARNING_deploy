@@ -75,6 +75,7 @@ $string['link'] = 'Link';
 $string['loading'] = 'Preparing the image';
 $string['loop'] = 'Loop';
 $string['managefiles'] = 'Manage files';
+$string['media:use'] = 'Use TinyMCE insert media';
 $string['mediabuttontitle'] = 'Multimedia';
 $string['mediamanagerbuttontitle'] = 'Media manager';
 $string['mediamanagerproperties'] = 'Media manager';
@@ -111,14 +112,6 @@ $string['videoheight'] = 'Video height';
 $string['videosourcelabel'] = 'Video source URL';
 $string['videowidth'] = 'Video width';
 $string['width'] = 'Width';
-
-// Deprecated since Moodle 4.4.
-$string['alignment'] = 'Alignment';
-$string['alignment_bottom'] = 'Bottom';
-$string['alignment_left'] = 'Left';
-$string['alignment_middle'] = 'Middle';
-$string['alignment_right'] = 'Right';
-$string['alignment_top'] = 'Top';
 
 // Deprecated since Moodle 4.5.
 $string['helplinktext'] = 'Media helper';

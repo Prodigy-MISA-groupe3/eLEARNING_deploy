@@ -20,13 +20,8 @@ namespace core_course\reportbuilder\datasource;
 
 use core_course_category;
 use core_reportbuilder_generator;
-use core_reportbuilder_testcase;
 use core_reportbuilder\local\filters\{category, select, text};
-
-defined('MOODLE_INTERNAL') || die();
-
-global $CFG;
-require_once("{$CFG->dirroot}/reportbuilder/tests/helpers.php");
+use core_reportbuilder\tests\core_reportbuilder_testcase;
 
 /**
  * Unit tests for course categories datasource
@@ -36,7 +31,7 @@ require_once("{$CFG->dirroot}/reportbuilder/tests/helpers.php");
  * @copyright   2023 Paul Holden <paulh@moodle.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class categories_test extends core_reportbuilder_testcase {
+final class categories_test extends core_reportbuilder_testcase {
 
     /**
      * Test default datasource
@@ -199,7 +194,7 @@ class categories_test extends core_reportbuilder_testcase {
             ], true],
             'Filter role (no match)' => ['role:name', [
                 'role:name_operator' => select::EQUAL_TO,
-                'role:name_value' => -1,
+                'role:name_value' => $DB->get_field('role', 'id', ['shortname' => 'teacher']),
             ], false],
 
             // User.

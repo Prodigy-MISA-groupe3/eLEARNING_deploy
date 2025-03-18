@@ -451,6 +451,15 @@ define('FEATURE_RATE', 'rate');
 /** True if module supports backup/restore of moodle2 format */
 define('FEATURE_BACKUP_MOODLE2', 'backup_moodle2');
 
+/** True if module shares questions with other modules. */
+define('FEATURE_PUBLISHES_QUESTIONS', 'publishesquestions');
+
+/** Used by {@see course_modinfo::is_mod_type_visible_on_course()} to determine if a plugin should render to display */
+define('FEATURE_CAN_DISPLAY', 'candisplay');
+
+/** Can this module type be uninstalled */
+define('FEATURE_CAN_UNINSTALL', 'canuninstall');
+
 /** True if module can show description on course main page */
 define('FEATURE_SHOW_DESCRIPTION', 'showdescription');
 
@@ -1185,10 +1194,11 @@ function purge_all_caches() {
  *
  * @param bool[] $options Specific parts of the cache to purge. Valid options are:
  *        'muc'    Purge MUC caches?
- *        'courses' Purge all course caches, or specific course caches (CLI only)
+ *        'courses' Purge all course caches, or specific course caches
  *        'theme'  Purge theme cache?
  *        'lang'   Purge language string cache?
  *        'js'     Purge javascript cache?
+ *        'template' Purge template cache
  *        'filter' Purge text filter cache?
  *        'other'  Purge all other caches?
  */
@@ -4813,6 +4823,11 @@ function remove_course_contents($courseid, $showfeedback = true, ?array $options
     // Delete every instance of every module,
     // this has to be done before deleting of course level stuff.
     $locations = core_component::get_plugin_list('mod');
+    // Sort mod instances that publish questions to the end of the list, so that they will be removed last.
+    // This is because they could have questions in use by other activities in this course.
+    uksort($locations, static function ($a, $b) {
+        return plugin_supports('mod', $a, FEATURE_PUBLISHES_QUESTIONS) <=> plugin_supports('mod', $b, FEATURE_PUBLISHES_QUESTIONS);
+    });
     foreach ($locations as $modname => $moddir) {
         if ($modname === 'NEWMODULE') {
             continue;
@@ -4898,12 +4913,6 @@ function remove_course_contents($courseid, $showfeedback = true, ?array $options
 
     if ($showfeedback) {
         echo $OUTPUT->notification($strdeleted.get_string('type_mod_plural', 'plugin'), 'notifysuccess');
-    }
-
-    // Delete questions and question categories.
-    question_delete_course($course);
-    if ($showfeedback) {
-        echo $OUTPUT->notification($strdeleted.get_string('questions', 'question'), 'notifysuccess');
     }
 
     // Delete content bank contents.
@@ -5090,8 +5099,7 @@ function reset_course_userdata($data) {
 
     // Calculate the time shift of dates.
     if (!empty($data->reset_start_date)) {
-        // Time part of course startdate should be zero.
-        $data->timeshift = $data->reset_start_date - usergetmidnight($data->reset_start_date_old);
+        $data->timeshift = $data->reset_start_date - $data->reset_start_date_old;
     } else {
         $data->timeshift = 0;
     }
@@ -5343,7 +5351,7 @@ function reset_course_userdata($data) {
     if (!empty($data->reset_gradebook_items)) {
         remove_course_grades($data->courseid, false);
         grade_grab_course_grades($data->courseid);
-        grade_regrade_final_grades($data->courseid);
+        grade_regrade_final_grades($data->courseid, async: true);
         $status[] = array('component' => $componentstr, 'item' => get_string('removeallcourseitems', 'grades'), 'error' => false);
 
     } else if (!empty($data->reset_gradebook_grades)) {
@@ -6011,7 +6019,7 @@ function generate_email_signoff() {
         $signoff .= $CFG->supportname."\n";
     }
 
-    $supportemail = $OUTPUT->supportemail(['class' => 'font-weight-bold']);
+    $supportemail = $OUTPUT->supportemail(['class' => 'fw-bold']);
 
     if ($supportemail) {
         $signoff .= "\n" . $supportemail . "\n";
@@ -7496,6 +7504,11 @@ function component_callback_exists($component, $function) {
     list($type, $name) = core_component::normalize_component($component);
     $component = $type . '_' . $name;
 
+    // Deprecated plugin type: callbacks not supported.
+    if (\core_component::is_plugintype_in_deprecation($type)) {
+        return false;
+    }
+
     $oldfunction = $name.'_'.$function;
     $function = $component.'_'.$function;
 
@@ -7542,6 +7555,15 @@ function component_class_callback($classname, $methodname, array $params, $defau
 
     if (!method_exists($classname, $methodname)) {
         return $default;
+    }
+
+    // If component can be found (flat class names not supported), and it's a deprecated plugintype, callbacks are unsupported.
+    $component = \core_component::get_component_from_classname($classname);
+    if ($component) {
+        [$type] = \core_component::normalize_component($component);
+        if (\core_component::is_plugintype_in_deprecation($type)) {
+            return $default;
+        }
     }
 
     $fullfunction = $classname . '::' . $methodname;
@@ -9046,10 +9068,10 @@ function get_performance_info() {
     $info['html'] .= '<li class="dbqueries col-sm-4">DB reads/writes: '.$info['dbqueries'].'</li> ';
     $info['txt'] .= 'db reads/writes: '.$info['dbqueries'].' ';
 
-    if ($DB->want_read_slave()) {
-        $info['dbreads_slave'] = $DB->perf_get_reads_slave();
-        $info['html'] .= '<li class="dbqueries col-sm-4">DB reads from slave: '.$info['dbreads_slave'].'</li> ';
-        $info['txt'] .= 'db reads from slave: '.$info['dbreads_slave'].' ';
+    if ($DB->want_read_replica()) {
+        $info['dbreads_replica'] = $DB->perf_get_reads_replica();
+        $info['html'] .= '<li class="dbqueries col-sm-4">DB reads from replica: '.$info['dbreads_replica'].'</li> ';
+        $info['txt'] .= 'db reads from replica: '.$info['dbreads_replica'].' ';
     }
 
     $info['dbtime'] = round($DB->perf_get_queries_time(), 5);

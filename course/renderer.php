@@ -94,6 +94,44 @@ class core_course_renderer extends plugin_renderer_base {
     }
 
     /**
+     * Renders course info box.
+     *
+     * @param stdClass $course course object
+     * @param string[] $widgets array of enrolment widgets
+     * @param \core\url|null $returnurl return url
+     * @return string
+     */
+    public function enrolment_options(stdClass $course, array $widgets, ?\core\url $returnurl = null): string {
+        if (!$widgets) {
+            if (isguestuser()) {
+                $message = get_string('noguestaccess', 'enrol');
+                $continuebutton = $this->output->continue_button(get_login_url());
+            } else if ($returnurl) {
+                $message = get_string('notenrollable', 'enrol');
+                $continuebutton = $this->output->continue_button($returnurl);
+            } else {
+                $url = get_local_referer(false);
+                if (empty($url)) {
+                    $url = new moodle_url('/index.php');
+                }
+                $message = get_string('notenrollable', 'enrol');
+                $continuebutton = $this->output->continue_button($url);
+            }
+        }
+
+        $courseinfobox = $this->course_info_box($course);
+
+        $templatecontext = [
+            'heading' => get_string('enrolmentoptions', 'enrol'),
+            'courseinfobox' => $courseinfobox,
+            'widgets' => array_values($widgets),
+            'message' => $message ?? '',
+            'continuebutton' => $continuebutton ?? '',
+        ];
+        return $this->render_from_template('core_enrol/enrolment_options', $templatecontext);
+    }
+
+    /**
      * Renderers a structured array of courses and categories into a nice XHTML tree structure.
      *
      * @deprecated since 2.5
@@ -580,7 +618,7 @@ class core_course_renderer extends plugin_renderer_base {
                 $rolenames = array_map(function ($role) {
                     return $role->displayname;
                 }, $coursecontact['roles']);
-                $name = html_writer::tag('span', implode(", ", $rolenames).': ', ['class' => 'font-weight-bold']);
+                $name = html_writer::tag('span', implode(", ", $rolenames).': ', ['class' => 'fw-bold']);
                 $name .= html_writer::link(
                    \core_user::get_profile_url($coursecontact['user'], context_system::instance()),
                    $coursecontact['username']
@@ -636,7 +674,7 @@ class core_course_renderer extends plugin_renderer_base {
         if ($chelper->get_show_courses() == self::COURSECAT_SHOW_COURSES_EXPANDED_WITH_CAT) {
             if ($cat = core_course_category::get($course->category, IGNORE_MISSING)) {
                 $content .= html_writer::start_tag('div', ['class' => 'coursecat']);
-                $content .= html_writer::tag('span', get_string('category').': ', ['class' => 'font-weight-bold']);
+                $content .= html_writer::tag('span', get_string('category').': ', ['class' => 'fw-bold']);
                 $content .= html_writer::link(new moodle_url('/course/index.php', ['categoryid' => $cat->id]),
                         $cat->get_formatted_name(), ['class' => $cat->visible ? '' : 'dimmed']);
                 $content .= html_writer::end_tag('div');
@@ -1517,19 +1555,11 @@ class core_course_renderer extends plugin_renderer_base {
     }
 
     /**
-     * Renders the activity information.
-     *
-     * Defer to template.
-     *
      * @deprecated since Moodle 4.3 MDL-78744
-     * @todo MDL-78926 This method will be deleted in Moodle 4.7
-     * @param \core_course\output\activity_information $page
-     * @return string html for the page
      */
-    public function render_activity_information(\core_course\output\activity_information $page) {
-        debugging('render_activity_information method is deprecated.', DEBUG_DEVELOPER);
-        $data = $page->export_for_template($this->output);
-        return $this->output->render_from_template('core_course/activity_info', $data);
+    #[\core\attribute\deprecated(null, since: '4.3', mdl: 'MDL-78744', final: true)]
+    public function render_activity_information() {
+        \core\deprecation::emit_deprecation_if_present([self::class, __FUNCTION__]);
     }
 
     /**
@@ -1639,7 +1669,7 @@ class core_course_renderer extends plugin_renderer_base {
                 $subtext = get_string('subscribe', 'forum');
             }
             $suburl = new moodle_url('/mod/forum/subscribe.php', array('id' => $forum->id, 'sesskey' => sesskey()));
-            $output .= html_writer::tag('div', html_writer::link($suburl, $subtext), array('class' => 'subscribelink'));
+            $output .= html_writer::tag('div', html_writer::link($suburl, $subtext), ['class' => 'subscribelink text-end']);
         }
 
         $coursemodule = get_coursemodule_from_instance('forum', $forum->id);

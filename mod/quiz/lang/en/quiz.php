@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Strings for component 'quiz', language 'en', branch 'MOODLE_20_STABLE'
+ * Strings for component 'mod_quiz', language 'en', branch 'MOODLE_20_STABLE'
  *
  * @package   mod_quiz
  * @copyright 1999 onwards Martin Dougiamas  {@link http://moodle.com}
@@ -125,6 +125,7 @@ $string['back'] = 'Back to preview question';
 $string['backtocourse'] = 'Back to the course';
 $string['backtoquestionlist'] = 'Back to question list';
 $string['backtoquiz'] = 'Back to quiz editing';
+$string['banknotfound'] = 'Question bank not found, please search again';
 $string['bestgrade'] = 'Best grade';
 $string['bothattempts'] = 'Show students with and without attempts';
 $string['browsersecurity'] = 'Browser security';
@@ -249,6 +250,7 @@ $string['createfirst'] = 'You must create some short-answer questions first.';
 $string['createmultiple'] = 'Add several random questions to quiz';
 $string['createnewquestion'] = 'Create new question';
 $string['createquestionandadd'] = 'Create a new question and add it to the quiz.';
+$string['currentbank'] = 'Current bank: {$a}';
 $string['custom'] = 'Custom format';
 $string['dataitemneed'] = 'You need to add at least one set of data items to get a valid question';
 $string['datasetdefinitions'] = 'Reusable dataset definitions for category {$a}';
@@ -554,6 +556,7 @@ $string['maxmarks_help'] = 'The maximum mark available for each question.';
 
 $string['min'] = 'Min';
 $string['minutes'] = 'Minutes';
+$string['missingcategory'] = 'Missing question category';
 $string['missingcorrectanswer'] = 'Correct answer must be specified';
 $string['missingitemtypename'] = 'Missing name';
 $string['missingquestion'] = 'This question no longer seems to exist';
@@ -842,8 +845,7 @@ $string['quiztimer'] = 'Quiz Timer';
 $string['quizwillopen'] = 'This quiz will open {$a}';
 $string['random'] = 'Random question';
 $string['randomcatwithsubcat'] = '{$a} and subcategories';
-$string['randomcoursecatwithsubcat'] = 'Any category inside course category {$a}';
-$string['randomcoursewithsubcat'] = 'Any category in this course';
+
 $string['randomcreate'] = 'Create random questions';
 $string['randomediting'] = 'Editing a random question';
 $string['randomfaultynosubcat'] = 'Faulty question';
@@ -865,7 +867,6 @@ $string['randomquestiontags_help'] = 'You can restrict the selection criteria fu
 
 The "random" questions will be selected from the questions that have all these tags.';
 $string['randomquestionusinganewcategory'] = 'Random question using a new category';
-$string['randomsystemwithsubcat'] = 'Any system-level category';
 $string['randomwithsubcat'] = 'Questions from this category and its subcategories.';
 $string['readytosend'] = 'You are about to send your whole quiz to be graded.  Are you sure you want to continue?';
 $string['reattemptquiz'] = 'Re-attempt quiz';
@@ -971,6 +972,7 @@ $string['saveandedit'] = 'Save changes and edit questions';
 $string['saveattemptfailed'] = 'Failed to save the current quiz attempt.';
 $string['savedfromdeletedcourse'] = 'Saved from deleted course "{$a}"';
 $string['savegrades'] = 'Save grades';
+$string['savemanualgradingfailed'] = 'Modification not saved. Please check the message below and try again.';
 $string['savemyanswers'] = 'Save my answers';
 $string['savenosubmit'] = 'Save without submitting';
 $string['saveoverrideandstay'] = 'Save and enter another override';
@@ -981,6 +983,7 @@ $string['savingnewmaximumgrade'] = 'Saving new maximum grade.';
 $string['score'] = 'Raw score';
 $string['scores'] = 'Scores';
 $string['search:activity'] = 'Quiz - activity information';
+$string['searchbyname'] = 'Search by name...';
 $string['sectionheadingedit'] = 'Edit heading \'{$a}\'';
 $string['sectionheadingremove'] = 'Remove heading \'{$a}\'';
 $string['sectionnoname'] = 'Untitled section';
@@ -993,6 +996,7 @@ $string['selectedattempts'] = 'Selected attempts...';
 $string['selectmultipleitems'] = 'Select multiple items';
 $string['selectmultipletoolbar'] = 'Select multiple toolbar';
 $string['selectnone'] = 'Deselect all';
+$string['selectquestionbank'] = 'Select question bank';
 $string['selectquestionslot'] = 'Select question {$a}';
 $string['selectquestiontype'] = '-- Select question type --';
 $string['sendnotificationopendatesoon'] = 'Notify user of an approaching quiz open date';
@@ -1125,15 +1129,13 @@ $string['questionversionlatest'] = 'v{$a} (latest)';
 $string['alwayslatest'] = 'Always latest';
 $string['gobacktoquiz'] = 'Go back';
 
-// Deprecated since Moodle 4.3.
-$string['completionminattemptsgroup'] = 'Require attempts';
-
-// Deprecated since Moodle 4.4.
-$string['grade'] = 'Grade';
-$string['timetaken'] = 'Time taken';
-
 // Deprecated since Moodle 4.5.
 $string['attemptsdeleted'] = 'Quiz attempts deleted';
 $string['gradesdeleted'] = 'Quiz grades deleted';
 $string['useroverridesdeleted'] = 'User overrides deleted';
 $string['groupoverridesdeleted'] = 'Group overrides deleted';
+
+// Deprecated since Moodle 5.0.
+$string['randomcoursecatwithsubcat'] = 'Any category inside course category {$a}';
+$string['randomcoursewithsubcat'] = 'Any category in this course';
+$string['randomsystemwithsubcat'] = 'Any system-level category';

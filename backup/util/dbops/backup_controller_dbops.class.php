@@ -569,9 +569,9 @@ abstract class backup_controller_dbops extends backup_dbops {
                         'backup_general_userscompletion'    => 'userscompletion',
                         'backup_general_logs'               => 'logs',
                         'backup_general_histories'          => 'grade_histories',
-                        'backup_general_questionbank'       => 'questionbank',
                         'backup_general_groups'             => 'groups',
                         'backup_general_competencies'       => 'competencies',
+                        'backup_general_customfield'        => 'customfield',
                         'backup_general_contentbankcontent' => 'contentbankcontent',
                         'backup_general_xapistate'          => 'xapistate',
                         'backup_general_legacyfiles'        => 'legacyfiles'
@@ -584,11 +584,12 @@ abstract class backup_controller_dbops extends backup_dbops {
                         'backup_import_activities'         => 'activities',
                         'backup_import_blocks'             => 'blocks',
                         'backup_import_filters'            => 'filters',
+                        'backup_import_badges'             => 'badges',
                         'backup_import_calendarevents'     => 'calendarevents',
                         'backup_import_permissions'        => 'permissions',
-                        'backup_import_questionbank'       => 'questionbank',
                         'backup_import_groups'             => 'groups',
                         'backup_import_competencies'       => 'competencies',
+                        'backup_import_customfield'        => 'customfield',
                         'backup_import_contentbankcontent' => 'contentbankcontent',
                         'backup_import_legacyfiles'        => 'legacyfiles'
                 );
@@ -600,9 +601,10 @@ abstract class backup_controller_dbops extends backup_dbops {
                          'activities',
                          'blocks',
                          'filters',
-                         'questionbank'
                     );
                     self::force_enable_settings($controller, $settings);
+                    // Badges are not included by default when duplicating activities.
+                    self::force_settings($controller, ['badges'], false);
                 }
                 break;
             case backup::MODE_AUTOMATED:
@@ -620,9 +622,9 @@ abstract class backup_controller_dbops extends backup_dbops {
                         'backup_auto_userscompletion'    => 'userscompletion',
                         'backup_auto_logs'               => 'logs',
                         'backup_auto_histories'          => 'grade_histories',
-                        'backup_auto_questionbank'       => 'questionbank',
                         'backup_auto_groups'             => 'groups',
                         'backup_auto_competencies'       => 'competencies',
+                        'backup_auto_customfield'        => 'customfield',
                         'backup_auto_contentbankcontent' => 'contentbankcontent',
                         'backup_auto_xapistate'          => 'xapistate',
                         'backup_auto_legacyfiles'        => 'legacyfiles'
@@ -642,9 +644,19 @@ abstract class backup_controller_dbops extends backup_dbops {
      * @param array $settings a map from admin config names to setting names (Config name => Setting name)
      */
     private static function force_enable_settings(backup_controller $controller, array $settings) {
+        self::force_settings($controller, $settings, true);
+    }
+
+    /**
+     * Set these settings to the given $value. No defaults from admin settings.
+     *
+     * @param backup_controller $controller The backup controller.
+     * @param array $settings a map from admin config names to setting names (Config name => Setting name).
+     * @param mixed $value the value to set the settings to.
+     */
+    private static function force_settings(backup_controller $controller, array $settings, $value) {
         $plan = $controller->get_plan();
         foreach ($settings as $config => $settingname) {
-            $value = true;
             if ($plan->setting_exists($settingname)) {
                 $setting = $plan->get_setting($settingname);
                 // We do not allow this setting to be locked for a duplicate function.

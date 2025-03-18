@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Defines names of plugin types and some strings used at the plugin managment
+ * Strings for component 'core_plugin', language 'en'.
  *
  * @package    core
  * @subpackage plugin
@@ -47,6 +47,7 @@ $string['dependencymissing'] = 'Missing';
 $string['dependencyunavailable'] = 'Unavailable';
 $string['dependencyupload'] = 'Upload';
 $string['dependencyuploadmissing'] = 'Upload ZIP files';
+$string['deprecated_type'] = "Deprecated plugin type";
 $string['displayname'] = 'Plugin name';
 $string['err_response_curl'] = 'Unable to fetch available updates data - unexpected cURL error.';
 $string['err_response_format_version'] = 'Unexpected version of the response format. Please try to re-check for available updates.';
@@ -134,8 +135,6 @@ $string['type_communication'] = 'Communication provider';
 $string['type_communication_plural'] = 'Communication providers';
 $string['type_contenttype'] = 'Content bank';
 $string['type_contenttype_plural'] = 'Content bank plugins';
-$string['type_contentbank'] = 'Content bank';
-$string['type_contentbank_plural'] = 'Content bank plugins';
 $string['type_customfield'] = 'Custom field';
 $string['type_customfield_plural'] = 'Custom fields';
 $string['type_coursereport'] = 'Course report';
@@ -268,7 +267,3 @@ $string['validationmsglevel_warning'] = 'Warning';
 $string['version'] = 'Version';
 $string['versiondb'] = 'Current version';
 $string['versiondisk'] = 'New version';
-
-// Deprecated since Moodle 4.2.
-$string['type_contentbank'] = 'Content bank';
-$string['type_contentbank_plural'] = 'Content bank plugins';

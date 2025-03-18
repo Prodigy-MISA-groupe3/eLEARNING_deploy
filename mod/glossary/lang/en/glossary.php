@@ -16,7 +16,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Strings for component 'glossary', language 'en', branch 'MOODLE_20_STABLE'
+ * Strings for component 'mod_glossary', language 'en', branch 'MOODLE_20_STABLE'
  *
  * @package mod_glossary
  * @copyright 1999 onwards Martin Dougiamas  {@link http://moodle.com}
@@ -74,7 +74,7 @@ $string['cnfapprovalstatus'] = 'Define the approval status by default of an entr
 $string['cnfcasesensitive'] = 'Define if an entry, when linked, is case sensitive by default';
 $string['cnfdefaulthook'] = 'Select the default selection to show when the glossary is first viewed';
 $string['cnfdefaultmode'] = 'Select the default frame to show when the glossary is first viewed.';
-$string['cnffullmatch'] = 'Define if an entry, when linked, should match the case in the target text by default';
+$string['cnffullmatch'] = 'Define if an entry, when linked, should match whole words (and not words inside other words) by default.';
 $string['cnflinkentry'] = 'Define if an entry should be automatically linked by default';
 $string['cnflinkglossaries'] = 'Define if a glossary should be automatically linked by default';
 $string['cnfrelatedview'] = 'Select the display format to be used for automatic linking and entry view.';
@@ -337,9 +337,6 @@ $string['withauthor'] = 'Concepts with author';
 $string['withoutauthor'] = 'Concepts without author';
 $string['writtenby'] = 'by';
 $string['youarenottheauthor'] = 'You are not the author of this comment, so you are not allowed to edit it.';
-
-// Deprecated since 4.3.
-$string['completionentriesgroup'] = 'Require entries';
 
 // Deprecated since 4.5.
 $string['tagsdeleted'] = 'Glossary tags have been deleted';

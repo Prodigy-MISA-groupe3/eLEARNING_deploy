@@ -25,35 +25,30 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-global $CFG;
+if ($ADMIN->fulltree) {
+    $settings->add(new admin_setting_heading('factor_role/description', '',
+        new lang_string('settings:description', 'factor_role')));
+    $settings->add(new admin_setting_heading('factor_role/settings', new lang_string('settings', 'moodle'), ''));
 
-// IOMAD
-require_once($CFG->dirroot . '/local/iomad/lib/company.php');
-$companyid = iomad::get_my_companyid(context_system::instance(), false);
-$postfix = "";
-if (!empty($companyid)) {
-    $postfix = "_$companyid";
+    $enabled = new admin_setting_configcheckbox('factor_role/enabled',
+        new lang_string('settings:enablefactor', 'tool_mfa'),
+        new lang_string('settings:enablefactor_help', 'tool_mfa'), 0);
+    $enabled->set_updatedcallback(function () {
+        \tool_mfa\manager::do_factor_action('role', get_config('factor_role', 'enabled') ? 'enable' : 'disable');
+    });
+    $settings->add($enabled);
+
+    $settings->add(new admin_setting_configtext('factor_role/weight',
+        new lang_string('settings:weight', 'tool_mfa'),
+        new lang_string('settings:weight_help', 'tool_mfa'), 100, PARAM_INT));
+
+    $choices = ['admin' => get_string('administrator')];
+    $roles = get_all_roles();
+    foreach ($roles as $role) {
+        $choices[$role->id] = role_get_name($role);
+    }
+
+    $settings->add(new admin_setting_configmultiselect('factor_role/roles',
+        new lang_string('settings:roles', 'factor_role'),
+        new lang_string('settings:roles_help', 'factor_role'), ['admin'], $choices));
 }
-
-$enabled = new admin_setting_configcheckbox('factor_role/enabled' . $postfix,
-    new lang_string('settings:enablefactor', 'tool_mfa'),
-    new lang_string('settings:enablefactor_help', 'tool_mfa'), 0);
-$enabled->set_updatedcallback(function () {
-    global $postfix;
-    \tool_mfa\manager::do_factor_action('role', get_config('factor_role', 'enabled' . $postfix) ? 'enable' : 'disable');
-});
-$settings->add($enabled);
-
-$settings->add(new admin_setting_configtext('factor_role/weight' . $postfix,
-    new lang_string('settings:weight', 'tool_mfa'),
-    new lang_string('settings:weight_help', 'tool_mfa'), 100, PARAM_INT));
-
-$choices = ['admin' => get_string('administrator')];
-$roles = get_all_roles();
-foreach ($roles as $role) {
-    $choices[$role->id] = role_get_name($role);
-}
-
-$settings->add(new admin_setting_configmultiselect('factor_role/roles' . $postfix,
-    new lang_string('settings:roles', 'factor_role'),
-    new lang_string('settings:roles_help', 'factor_role'), ['admin'], $choices));

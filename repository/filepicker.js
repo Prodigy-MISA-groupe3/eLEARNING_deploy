@@ -347,7 +347,7 @@ YUI.add('moodle-core_filepicker', function(Y) {
 
             var checkboxLabel = Y.Node.create('<label>')
                 .setHTML("Select file '" + o.data.fullname + "'")
-                .addClass('sr-only')
+                .addClass('visually-hidden')
                 .setAttrs({
                     for: checkbox.generateID(),
                 });
@@ -392,7 +392,7 @@ YUI.add('moodle-core_filepicker', function(Y) {
 
             var checkboxLabel = Y.Node.create('<label>')
                 .setHTML(M.util.get_string('selectallornone', 'form'))
-                .addClass('sr-only')
+                .addClass('visually-hidden')
                 .setAttrs({
                     for: checkbox.generateID(),
                 });
@@ -1241,6 +1241,14 @@ M.core_filepicker.init = function(Y, options) {
                         .one('.fp-value').setContent(Y.Escape.html(value));
                 }
             }
+            // Load popover for the filepicker content.
+            var filepickerContent = Y.one('.file-picker.fp-select');
+            require(['theme_boost/bootstrap/popover'], function(Popover) {
+                var popoverTriggerList = filepickerContent.getDOMNode().querySelectorAll('[data-bs-toggle="popover"]');
+                popoverTriggerList.forEach((popoverTriggerEl) => {
+                    new Popover(popoverTriggerEl);
+                });
+            });
         },
         setup_select_file: function() {
             var client_id = this.options.client_id;
@@ -1785,7 +1793,15 @@ M.core_filepicker.init = function(Y, options) {
             if (obj.repo_id && scope.options.repositories[obj.repo_id]) {
                 scope.fpnode.addClass('repository_'+scope.options.repositories[obj.repo_id].type)
             }
-            Y.one('.file-picker .fp-repo-items').focus();
+            var filepickerContent = Y.one('.file-picker .fp-repo-items');
+            filepickerContent.focus();
+            // Load popover for the filepicker content.
+            require(['theme_boost/bootstrap/popover'], function(Popover) {
+                var popoverTriggerList = filepickerContent.getDOMNode().querySelectorAll('[data-bs-toggle="popover"]');
+                popoverTriggerList.forEach((popoverTriggerEl) => {
+                    new Popover(popoverTriggerEl);
+                });
+            });
 
             // display response
             if (obj.login) {

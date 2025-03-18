@@ -57,13 +57,17 @@ class count extends base {
      * @return string
      */
     public static function get_field_sql(string $field, int $columntype): string {
-        global $DB;
-
-        if ($columntype === column::TYPE_LONGTEXT && $DB->get_dbfamily() === 'oracle') {
-            $field = $DB->sql_compare_text($field, 255);
-        }
-
         return "COUNT({$field})";
+    }
+
+    /**
+     * Returns aggregated column type
+     *
+     * @param int $columntype
+     * @return int
+     */
+    public static function get_column_type(int $columntype): int {
+        return column::TYPE_INTEGER;
     }
 
     /**
@@ -75,7 +79,7 @@ class count extends base {
      * @param int $columntype
      * @return int
      */
-    public static function format_value($value, array $values, array $callbacks, int $columntype): int {
+    public function format_value($value, array $values, array $callbacks, int $columntype): int {
         return (int) reset($values);
     }
 }

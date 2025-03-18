@@ -36,7 +36,7 @@ use stdClass;
  * @copyright  2020 Ferran Recio <ferran@moodle.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class grader_test extends \advanced_testcase {
+final class grader_test extends \advanced_testcase {
 
     /**
      * Setup to ensure that fixtures are loaded.
@@ -139,6 +139,7 @@ class grader_test extends \advanced_testcase {
         $grader->grade_item_update($param);
 
         // Check new grade item and grades.
+        grade_regrade_final_grades($course->id);
         $gradeinfo = grade_get_grades($course->id, 'mod', 'h5pactivity', $activity->id, $user->id);
         $item = array_shift($gradeinfo->items);
         $this->assertEquals($scaleid, $item->scaleid);
@@ -160,7 +161,7 @@ class grader_test extends \advanced_testcase {
      *
      * @return array
      */
-    public function grade_item_update_data(): array {
+    public static function grade_item_update_data(): array {
         return [
             'Change idnumber' => [
                 100, false, 'newidnumber'
@@ -245,6 +246,7 @@ class grader_test extends \advanced_testcase {
         $grader->update_grades($userid);
 
         // Check new grade item and grades.
+        grade_regrade_final_grades($course->id);
         $gradeinfo = grade_get_grades($course->id, 'mod', 'h5pactivity', $activity->id, [$user1->id, $user2->id]);
         $item = array_shift($gradeinfo->items);
         $this->assertArrayHasKey($user1->id, $item->grades);
@@ -258,7 +260,7 @@ class grader_test extends \advanced_testcase {
      *
      * @return array
      */
-    public function update_grades_data(): array {
+    public static function update_grades_data(): array {
         return [
             // Quantitative grade, all attempts completed.
             'Same grademax, all users, all completed' => [

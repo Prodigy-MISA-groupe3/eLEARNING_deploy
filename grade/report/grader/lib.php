@@ -547,7 +547,15 @@ class grade_report_grader extends grade_report {
      * @return int
      */
     public function get_max_students_per_page(): int {
-        return round(static::MAX_GRADES_PER_PAGE / count($this->get_allgradeitems()));
+        global $CFG;
+
+        if (isset($CFG->maxgradesperpage) && clean_param($CFG->maxgradesperpage, PARAM_INT) > 0) {
+            $maxgradesperpage = $CFG->maxgradesperpage;
+        } else {
+            $maxgradesperpage = self::MAX_GRADES_PER_PAGE;
+        }
+
+        return round($maxgradesperpage / count($this->get_allgradeitems()));
     }
 
     /**
@@ -1520,7 +1528,7 @@ class grade_report_grader extends grade_report {
             'class' => 'gradeitemheader',
             'aria-describedby' => $describedbyid
         ]);
-        $courseheader .= html_writer::div($showing, 'sr-only', [
+        $courseheader .= html_writer::div($showing, 'visually-hidden', [
             'id' => $describedbyid
         ]);
 

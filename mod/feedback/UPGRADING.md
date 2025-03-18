@@ -1,6 +1,12 @@
 # mod_feedback Upgrade notes
 
-## 5.0dev
+## 5.0dev+
+
+### Added
+
+- Added new `mod_feedback_questions_reorder` external function
+
+  For more information see [MDL-81745](https://tracker.moodle.org/browse/MDL-81745)
 
 ### Deprecated
 

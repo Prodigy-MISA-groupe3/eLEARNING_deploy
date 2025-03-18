@@ -30,6 +30,7 @@
  */
 
 define('CLI_SCRIPT', true);
+define('NO_DEBUG_DISPLAY', false);
 
 // extra execution prevention - we can not just require config.php here
 if (isset($_SERVER['REMOTE_ADDR'])) {
@@ -165,7 +166,7 @@ $CFG->running_installer    = true;
 $CFG->early_install_lang   = true;
 $CFG->ostype               = (stristr(PHP_OS, 'win') && !stristr(PHP_OS, 'darwin')) ? 'WINDOWS' : 'UNIX';
 $CFG->dboptions            = array();
-$CFG->debug                = (E_ALL | E_STRICT);
+$CFG->debug                = (E_ALL);
 $CFG->debugdisplay         = true;
 $CFG->debugdeveloper       = true;
 
@@ -216,7 +217,6 @@ $databases = array('mysqli' => moodle_database::get_driver_instance('mysqli', 'n
                    'auroramysql' => moodle_database::get_driver_instance('auroramysql', 'native'),
                    'mariadb'=> moodle_database::get_driver_instance('mariadb', 'native'),
                    'pgsql'  => moodle_database::get_driver_instance('pgsql',  'native'),
-                   'oci'    => moodle_database::get_driver_instance('oci',    'native'),
                    'sqlsrv' => moodle_database::get_driver_instance('sqlsrv', 'native'), // MS SQL*Server PHP driver
                   );
 foreach ($databases as $type=>$database) {
@@ -560,7 +560,6 @@ do {
     if ($interactive) {
         cli_separator();
         cli_heading(get_string('dbprefix', 'install'));
-        //TODO: solve somehow the prefix trouble for oci.
         if ($options['prefix'] !== '') {
             $prompt = get_string('clitypevaluedefault', 'admin', $options['prefix']);
         } else {

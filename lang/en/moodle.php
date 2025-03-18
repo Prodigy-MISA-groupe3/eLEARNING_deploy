@@ -217,10 +217,13 @@ $string['backuptakealook'] = 'Please take a look at your backup logs in:
 $string['backupuserfileshelp'] = 'Choose whether user files (eg profile images) should be included in automated backups';
 $string['backupversion'] = 'Backup version';
 $string['badges'] = 'Badges';
+$string['between'] = 'Between';
 $string['block'] = 'Block';
 $string['blockconfiga'] = 'Configuring a {$a} block';
 $string['blockconfigbad'] = 'This block has not been implemented correctly and thus cannot provide a configuration interface.';
 $string['blocks'] = 'Blocks';
+$string['blocks_main'] = 'Main content blocks';
+$string['blocks_supplementary'] = 'Supplementary blocks';
 $string['blocksaddedit'] = 'Add/Edit blocks';
 $string['blockseditoff'] = 'Blocks editing off';
 $string['blocksediton'] = 'Blocks editing on';
@@ -297,6 +300,7 @@ $string['confirmednot'] = 'Your registration has not yet been confirmed. Please 
 $string['confirmcheckfull'] = 'Are you absolutely sure you want to confirm {$a} ?';
 $string['confirmcoursemove'] = 'Are you sure you want to move this course ({$a->course}) into this category ({$a->category})?';
 $string['considereddigitalminor'] = 'You are too young to create an account on this site.';
+$string['contactsbyrolelist'] = '{$a->role}: {$a->contacts}';
 $string['content'] = 'Content';
 $string['contentexport_aboutthiscourse'] = 'Course summary';
 $string['contentexport_coursesummary'] = 'This file is part of the content downloaded from <a href="{$a->courselink}">{$a->coursename}</a>.';
@@ -339,6 +343,7 @@ $string['copyrightnotice'] = 'Copyright notice';
 $string['coresystem'] = 'System';
 $string['cost'] = 'Cost';
 $string['costdefault'] = 'Default cost';
+$string['count_of_total'] = '<strong>{$a->count}</strong> of {$a->total}';
 $string['counteditems'] = '{$a->count} {$a->items}';
 $string['country'] = 'Country';
 $string['course'] = 'Course';
@@ -498,6 +503,8 @@ $string['dataformats'] = 'Data formats';
 $string['date'] = 'Date';
 $string['datemostrecentfirst'] = 'Date - most recent first';
 $string['datemostrecentlast'] = 'Date - most recent last';
+$string['datetimefilterafter'] = '{$a->title} after';
+$string['datetimefilterbefore'] = '{$a->title} before';
 $string['day'] = 'day';
 $string['days'] = 'days';
 $string['decodinginternallinks'] = 'Decoding internal links';
@@ -608,7 +615,7 @@ $string['editcategorythis'] = 'Edit this category';
 $string['editcoursesettings'] = 'Edit course settings';
 $string['editsettings'] = 'Edit settings';
 $string['editfiles'] = 'Edit files';
-$string['editgroupprofile'] = 'Edit group profile';
+$string['editgroupprofile'] = 'Edit group description';
 $string['editingteachershort'] = 'Editor';
 $string['editmode'] = 'Edit mode';
 $string['editlock'] = 'This value cannot be edited!';
@@ -828,6 +835,7 @@ $string['eventcoursemodulecreated'] = 'Course module created';
 $string['eventcoursemoduledeleted'] = 'Course module deleted';
 $string['eventcoursemoduleupdated'] = 'Course module updated';
 $string['eventcoursemoduleviewed'] = 'Course module viewed';
+$string['eventcourseoverviewviewed'] = 'Course activities overview page viewed';
 $string['eventcoursessearched'] = 'Courses searched';
 $string['eventcourseresetended'] = 'Course reset ended';
 $string['eventcourseresetstarted'] = 'Course reset started';
@@ -892,7 +900,6 @@ $string['failedtaskbody'] = '<p>Hi {$a->firstname},</p>
 <p>The task <b>{$a->taskname}</b> has failed multiple times and requires attention.</p>
 <p><a href="{$a->link}">See task</a></p>';
 $string['failedtasksubject'] = 'Task failed: {$a}';
-$string['failedtaskcontexturlname'] = 'Status report';
 $string['feedback'] = 'Feedback';
 $string['file'] = 'File';
 $string['fileexists'] = 'There is already a file called {$a}';
@@ -1439,6 +1446,8 @@ $string['movedown'] = 'Move down';
 $string['movefilestohere'] = 'Move files to here';
 $string['movefull'] = 'Move {$a} to this location';
 $string['movehere'] = 'Move to here';
+$string['moveitemdown'] = 'Move {$a} down';
+$string['moveitemup'] = 'Move {$a} up';
 $string['moveleft'] = 'Move left';
 $string['moremenu'] = 'More';
 $string['moreactions'] = 'More actions';
@@ -1501,20 +1510,18 @@ $string['newuser'] = 'New user';
 $string['newusernewpasswordsubj'] = 'New user account';
 $string['newusernewpasswordtext'] = 'Hi {$a->firstname},
 
-A new account has been created for you at \'{$a->sitename}\'
-and you have been issued with a new temporary password.
+An account has been created for you at \'{$a->sitename}\'.
 
-Your login information is:
    username: {$a->username}
    password: {$a->newpassword}
-             (you will have to change your password
-              when you log in for the first time)
+
+(You will be prompted to change your password when you log in for the first time.)
 
 To start using \'{$a->sitename}\', log in at
    {$a->link}
 
-If you need help, you can contact the site administrator,
-{$a->admin}';
+If you need help, contact the site administrator,
+{$a->signoff}';
 $string['newusers'] = 'New users';
 $string['newwindow'] = 'New window';
 $string['next'] = 'Next';
@@ -1651,7 +1658,7 @@ $string['pathnotexists'] = 'Path doesn\'t exist in your server!';
 $string['pathslasherror'] = 'Path can\'t end with a slash!!';
 $string['paymentinstant'] = 'Use the button below to pay and be enrolled within minutes!';
 $string['paymentpending'] = '(<small><b><u>{$a}</u></b> pending</small>)';
-$string['paymentrequired'] = 'This course requires a payment for entry.';
+$string['paymentrequired'] = 'This course requires a payment for entry';
 $string['payments'] = 'Payments';
 $string['paymentsorry'] = 'Thank you for your payment!  Unfortunately your payment has not yet been fully processed, and you are not yet registered to enter the course "{$a->fullname}".  Please try continuing to the course in a few seconds, but if you continue to have trouble then please alert the {$a->teacher} or the site administrator';
 $string['paymentthanks'] = 'Thank you for your payment!  You are now enrolled in your course:<br />"{$a}"';
@@ -1853,6 +1860,7 @@ $string['resortsubcategoriesby'] = 'Sort subcategories by {$a} ascending';
 $string['resortsubcategoriesbyreverse'] = 'Sort subcategories by {$a} descending';
 $string['resortcourses'] = 'Sort courses';
 $string['resource'] = 'Resource';
+$string['resource_type'] = 'Resource type';
 $string['resourcedisplayauto'] = 'Automatic';
 $string['resourcedisplaydownload'] = 'Force download';
 $string['resourcedisplayembed'] = 'Embed';
@@ -1973,6 +1981,7 @@ $string['selectallusersonpage'] = 'Select all users on this page';
 $string['selectalluserswithcount'] = 'Select all {$a} users';
 $string['selectamodule'] = 'Please select an activity module';
 $string['selectanoptions'] = 'Select an option';
+$string['selectdates'] = 'Select dates';
 $string['selectdefault'] = 'Select default';
 $string['selectedfile'] = 'Selected file';
 $string['selectedcategories'] = 'Selected categories';
@@ -2444,58 +2453,6 @@ $string['yourwordforx'] = 'Your word for \'{$a}\'';
 $string['zippingbackup'] = 'Zipping backup';
 $string['deprecatedeventname'] = '{$a} (no longer in use)';
 
-// Deprecated since Moodle 4.3.
-$string['clicktochangeinbrackets'] = '{$a} (Click to change)';
-$string['modshowcmtitle'] = 'Show activity';
-$string['makeavailablecmtitle'] = 'Make activity available';
-$string['moodlenet:sharetyperesource'] = 'resource';
-
-// Deprecated since Moodle 4.4.
-$string['emailpasswordsent'] = 'Thank you for confirming the change of password.
-An email containing your new password has been sent to your address at<br /><b>{$a->email}</b>.<br />
-The new password was automatically generated - you might like to
-<a href="{$a->link}">change your password</a> to something easier to remember.';
-$string['passwordsenttext'] = '<p>An email has been sent to your address at {$a->email}.</p>
-   <p><b>Please check your email for your new password</b></p>
-   <p>The new password was automatically generated, so you might like to
-   <a href="{$a->link}">change it to something easier to remember</a>.</p>';
-$string['passwordsent'] = 'Password has been sent';
-$string['passwordrecovery'] = 'Yes, help me log in';
-$string['passwordconfirmchange'] = 'Confirm password change';
-$string['passwordnohelp'] = 'No help is available to find your lost password. Please contact your Moodle administrator.';
-$string['showallusers'] = 'Show all users';
-$string['markedthistopic'] = 'This section is highlighted as the current section';
-$string['markthistopic'] = 'Highlight this section as the current section';
-$string['socialheadline'] = 'Social forum - latest topics';
-$string['weekhide'] = 'Hide this week from {$a}';
-$string['weeklyoutline'] = 'Weekly outline';
-$string['weekshow'] = 'Show this week to {$a}';
-$string['topicoutline'] = 'Topic outline';
-$string['topicshow'] = 'Show this topic to {$a}';
-$string['topichide'] = 'Hide this topic from {$a}';
-$string['summary_help'] = 'The idea of a summary is a short text to prepare students for the activities within the topic or week. The text is shown on the course page under the section name.';
-$string['editsummary'] = 'Edit summary';
-$string['format_help'] = 'The course format determines the layout of the course page.
-
-* Single activity - The course contains only one activity or resource.
-* Social - The course is centred around a main forum on the course page. Additional activities and resources can be added using the Social activities block.
-* Custom sections - The course is divided into customisable sections.
-* Weekly sections - The course is divided into sections corresponding to each week, beginning from the course start date.';
-$string['addinganewto'] = 'Adding a new {$a->what} to {$a->to}';
-$string['editinga'] = 'Editing {$a}';
-$string['updatinga'] = 'Updating: {$a}';
-$string['updatingain'] = 'Updating {$a->what} in {$a->in}';
-$string['summaryof'] = 'Summary of {$a}';
-$string['from'] = 'From';
-$string['to'] = 'To';
-$string['viewresults'] = 'View results for {$a}';
-$string['coursesearch'] = 'Search courses';
-$string['coursesearch_help'] = 'You can search for multiple words at once and can refine your search as follows:
-
-* word - find any match of this word within the text
-* +word - only exact matching words will be found
-* -word - don\'t include results containing this word.';
-
 // Deprecated since Moodle 4.5.
 $string['commentscount'] = 'Comments ({$a})';
 $string['datechanged'] = 'Date changed';
@@ -2524,3 +2481,6 @@ Following is the content of your email:';
 $string['noreplybouncesubject'] = '{$a} - bounced email.';
 $string['registrationcontactno'] = 'No, I do not want to be contacted by other people';
 $string['registrationcontactyes'] = 'Yes, provide a form for other Moodlers to contact me';
+
+// Deprecated since Moodle 5.0.
+$string['failedtaskcontexturlname'] = 'Status report';

@@ -24,6 +24,8 @@
 
 namespace core_analytics;
 
+use core_analytics\tests\mlbackend_helper_trait;
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once(__DIR__ . '/fixtures/test_indicator_max.php');
@@ -41,7 +43,8 @@ require_once(__DIR__ . '/fixtures/test_analysis.php');
  * @copyright 2017 David Monllaó {@link http://www.davidmonllao.com}
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class model_test extends \advanced_testcase {
+final class model_test extends \advanced_testcase {
+    use mlbackend_helper_trait;
 
     /** @var model Store Model. */
     protected $model;
@@ -95,13 +98,16 @@ class model_test extends \advanced_testcase {
     public function test_delete(): void {
         global $DB;
 
+        if (!self::is_mlbackend_python_configured()) {
+            $this->markTestSkipped('mlbackend_python is not configured.');
+        }
+
         $this->resetAfterTest(true);
         set_config('enabled_stores', 'logstore_standard', 'tool_log');
 
-        $coursepredict1 = $this->getDataGenerator()->create_course(array('visible' => 0));
-        $coursepredict2 = $this->getDataGenerator()->create_course(array('visible' => 0));
-        $coursetrain1 = $this->getDataGenerator()->create_course(array('visible' => 1));
-        $coursetrain2 = $this->getDataGenerator()->create_course(array('visible' => 1));
+        // Create some courses.
+        $this->generate_courses(2, ['visible' => 0]);
+        $this->generate_courses(2, ['visible' => 1]);
 
         $this->model->enable('\core\analytics\time_splitting\single_range');
 
@@ -110,9 +116,6 @@ class model_test extends \advanced_testcase {
 
         // Fake evaluation results record to check that it is actually deleted.
         $this->add_fake_log();
-
-        $modeloutputdir = $this->model->get_output_dir(array(), true);
-        $this->assertTrue(is_dir($modeloutputdir));
 
         // Generate a prediction action to confirm that it is deleted when there is an important update.
         $predictions = $DB->get_records('analytics_predictions');
@@ -128,7 +131,6 @@ class model_test extends \advanced_testcase {
         $this->assertEmpty($DB->count_records('analytics_train_samples'));
         $this->assertEmpty($DB->count_records('analytics_predict_samples'));
         $this->assertEmpty($DB->count_records('analytics_used_files'));
-        $this->assertFalse(is_dir($modeloutputdir));
 
         set_config('enabled_stores', '', 'tool_log');
         get_log_manager(true);
@@ -140,13 +142,16 @@ class model_test extends \advanced_testcase {
     public function test_clear(): void {
         global $DB;
 
+        if (!self::is_mlbackend_python_configured()) {
+            $this->markTestSkipped('mlbackend_python is not configured.');
+        }
+
         $this->resetAfterTest(true);
         set_config('enabled_stores', 'logstore_standard', 'tool_log');
 
-        $coursepredict1 = $this->getDataGenerator()->create_course(array('visible' => 0));
-        $coursepredict2 = $this->getDataGenerator()->create_course(array('visible' => 0));
-        $coursetrain1 = $this->getDataGenerator()->create_course(array('visible' => 1));
-        $coursetrain2 = $this->getDataGenerator()->create_course(array('visible' => 1));
+        // Create some courses.
+        $this->generate_courses(2, ['visible' => 0]);
+        $this->generate_courses(2, ['visible' => 1]);
 
         $this->model->enable('\core\analytics\time_splitting\single_range');
 
@@ -167,7 +172,6 @@ class model_test extends \advanced_testcase {
 
         // Update to an empty time splitting method to force model::clear execution.
         $this->model->clear();
-        $this->assertFalse(is_dir($modelversionoutputdir));
 
         // Check that most of the stuff got deleted.
         $this->assertEquals(1, $DB->count_records('analytics_models', array('id' => $this->modelobj->id)));
@@ -379,6 +383,10 @@ class model_test extends \advanced_testcase {
      * Test that import_model import models' configurations.
      */
     public function test_import_model_config(): void {
+        if (!self::is_mlbackend_python_configured()) {
+            $this->markTestSkipped('mlbackend_python is not configured.');
+        }
+
         $this->resetAfterTest(true);
 
         $this->model->enable('\\core\\analytics\\time_splitting\\quarters');
@@ -421,6 +429,10 @@ class model_test extends \advanced_testcase {
      * Test export_config
      */
     public function test_export_config(): void {
+        if (!self::is_mlbackend_python_configured()) {
+            $this->markTestSkipped('mlbackend_python is not configured.');
+        }
+
         $this->resetAfterTest(true);
 
         $this->model->enable('\\core\\analytics\\time_splitting\\quarters');
@@ -525,7 +537,7 @@ class model_test extends \advanced_testcase {
             $this->markTestSkipped('PHPUNIT_LONGTEST is not defined');
         }
 
-        // 10000 should be enough to make oracle and mssql fail, if we want pgsql to fail we need around 70000
+        // 10000 should be enough to make mssql fail, if we want pgsql to fail we need around 70000
         // users, that is a few minutes just to create the users.
         $nusers = 10000;
 

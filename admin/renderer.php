@@ -295,7 +295,6 @@ class core_admin_renderer extends plugin_renderer_base {
 
         $output .= $this->header();
         $output .= $this->output->heading(get_string('notifications', 'admin'));
-        $output .= $this->upgrade_news_message();
         $output .= $this->maturity_info($maturity);
         $output .= empty($CFG->disableupdatenotifications) ? $this->available_updates($availableupdates, $availableupdatesfetch) : '';
         $output .= $this->insecure_dataroot_warning($insecuredataroot);
@@ -756,22 +755,6 @@ class core_admin_renderer extends plugin_renderer_base {
     }
 
     /**
-     * Display a transient notification for important upgrades messages for
-     * specific releases.
-     *
-     * @return string HTML to output.
-     */
-    protected function upgrade_news_message() {
-        return $this->notification(
-            get_string('importantupdates_content', 'admin'),
-            'info',
-            false,
-            get_string('importantupdates_title', 'admin'),
-            'i/circleinfo, core'
-        );
-    }
-
-    /**
      * Display a warning about installing development code if necesary.
      * @param int $maturity
      * @return string HTML to output.
@@ -1041,7 +1024,7 @@ class core_admin_renderer extends plugin_renderer_base {
      */
     public function plugins_check_table(core_plugin_manager $pluginman, $version, array $options = array()) {
         global $CFG;
-        $plugininfo = $pluginman->get_plugins();
+        $plugininfo = $pluginman->get_plugins(true);
 
         if (empty($plugininfo)) {
             return '';
@@ -1076,6 +1059,20 @@ class core_admin_renderer extends plugin_renderer_base {
         $upgradeabortable = $pluginman->list_restorable_archives();
 
         foreach ($plugininfo as $type => $plugins) {
+            // Skip deleted plugin types.
+            if (\core_component::is_deleted_plugin_type($type)) {
+                continue;
+            }
+
+            // Skip deprecated plugintypes having no installed plugins, in which case there is nothing to report.
+            if (\core_component::is_deprecated_plugin_type($type)) {
+                $reportableplugins = array_filter($plugins, function($plugininfo) {
+                    return $plugininfo->versiondb != null;
+                });
+                if (empty($reportableplugins)) {
+                    continue;
+                }
+            }
 
             $header = new html_table_cell($pluginman->plugintype_name_plural($type));
             $header->header = true;
@@ -1124,7 +1121,7 @@ class core_admin_renderer extends plugin_renderer_base {
                 );
 
                 $versiondb = new html_table_cell($plugin->versiondb);
-                $versiondisk = new html_table_cell($plugin->versiondisk);
+                $versiondisk = $plugin->is_deprecated() ? new html_table_cell() : new html_table_cell($plugin->versiondisk);
 
                 if ($isstandard = $plugin->is_standard()) {
                     $row->attributes['class'] .= ' standard';
@@ -1143,6 +1140,9 @@ class core_admin_renderer extends plugin_renderer_base {
 
                 $statuscode = $plugin->get_status();
                 $row->attributes['class'] .= ' status-' . $statuscode;
+                if ($plugin->is_deprecated()) {
+                    $row->attributes['class'] .= ' deprecatedtype';
+                }
                 $statusclass = 'statustext badge ';
                 switch ($statuscode) {
                     case core_plugin_manager::PLUGIN_STATUS_NEW:
@@ -1162,6 +1162,18 @@ class core_admin_renderer extends plugin_renderer_base {
                         break;
                 }
                 $status = html_writer::span(get_string('status_' . $statuscode, 'core_plugin'), $statusclass);
+
+                $deprecatedstatus = '';
+                if ($plugin->is_deprecated()) {
+                    // During upgrade, omit the status for deprecated plugin types, unless it's 'missing from disk'.
+                    // Deprecated plugins cannot be installed, upgraded, downgraded, and won't be automatically deleted.
+                    $status = in_array($statuscode,
+                        [core_plugin_manager::PLUGIN_STATUS_MISSING, core_plugin_manager::PLUGIN_STATUS_DELETE]) ? $status : '';
+                    $deprecatedstatus = html_writer::span(
+                        get_string('deprecated_type', 'core_plugin'),
+                        'statustext badge bg-danger text-white'
+                    );
+                }
 
                 if (!empty($installabortable[$plugin->component])) {
                     $status .= $this->output->single_button(
@@ -1188,7 +1200,7 @@ class core_admin_renderer extends plugin_renderer_base {
                     }
                 }
 
-                $status = new html_table_cell($sourcelabel.' '.$status);
+                $status = new html_table_cell($sourcelabel.' '.$status.' '.$deprecatedstatus);
                 if ($plugin->pluginsupported != null) {
                     $requires = new html_table_cell($this->required_column($plugin, $pluginman, $version, $CFG->branch));
                 } else {
@@ -1196,7 +1208,8 @@ class core_admin_renderer extends plugin_renderer_base {
                 }
 
                 $statusisboring = in_array($statuscode, array(
-                        core_plugin_manager::PLUGIN_STATUS_NODB, core_plugin_manager::PLUGIN_STATUS_UPTODATE));
+                        core_plugin_manager::PLUGIN_STATUS_NODB, core_plugin_manager::PLUGIN_STATUS_UPTODATE))
+                        && !$plugin->is_deprecated();
 
                 if ($options['xdep']) {
                     // we want to see only plugins with failed dependencies
@@ -1672,12 +1685,26 @@ class core_admin_renderer extends plugin_renderer_base {
      */
     public function plugins_overview_panel(core_plugin_manager $pluginman, array $options = array()) {
 
-        $plugininfo = $pluginman->get_plugins();
+        $plugininfo = $pluginman->get_plugins(true);
         $this->page->requires->js_call_amd('core_admin/plugins_overview', 'init');
 
         $numtotal = $numextension = $numupdatable = $numinstallable = $nummissing = $numnew = 0;
 
         foreach ($plugininfo as $type => $plugins) {
+            if (\core_component::is_deleted_plugin_type($type)) {
+                continue;
+            }
+
+            // Skip deprecated plugintypes having no installed plugins, in which case there is nothing to report.
+            if (\core_component::is_deprecated_plugin_type($type)) {
+                $reportableplugins = array_filter($plugins, function($plugininfo) {
+                    return $plugininfo->versiondb != null;
+                });
+                if (empty($reportableplugins)) {
+                    continue;
+                }
+            }
+
             foreach ($plugins as $name => $plugin) {
                 if ($res = $plugin->available_updates()) {
                     $numupdatable++;
@@ -1706,13 +1733,13 @@ class core_admin_renderer extends plugin_renderer_base {
             $this->page->url,
             get_string('overviewall', 'core_plugin'),
             ['title' => get_string('filterall', 'core_plugin'), 'data-filterby' => 'all', 'class' => 'active']
-        ).' '.html_writer::span($numtotal, 'badge number number-all');
+        ).' '.html_writer::span($numtotal, 'badge text-dark number number-all');
 
         $infoext = html_writer::link(
             new moodle_url($this->page->url, [], 'additional'),
             get_string('overviewext', 'core_plugin'),
             ['title' => get_string('filtercontribonly', 'core_plugin'), 'data-filterby' => 'additional']
-        ).' '.html_writer::span($numextension, 'badge number number-additional');
+        ).' '.html_writer::span($numextension, 'badge text-dark number number-additional');
 
         if ($numupdatable) {
             $infoupdatable = html_writer::link(
@@ -1778,7 +1805,7 @@ class core_admin_renderer extends plugin_renderer_base {
      */
     public function plugins_control_panel(core_plugin_manager $pluginman, array $options = array()) {
 
-        $plugininfo = $pluginman->get_plugins();
+        $plugininfo = $pluginman->get_plugins(true);
 
         $table = new html_table();
         $table->id = 'plugins-control-panel';
@@ -1795,6 +1822,20 @@ class core_admin_renderer extends plugin_renderer_base {
         );
 
         foreach ($plugininfo as $type => $plugins) {
+            if (\core_component::is_deleted_plugin_type($type)) {
+                continue;
+            }
+
+            // Skip deprecated plugintypes having no installed plugins, in which case there is nothing to report.
+            if (\core_component::is_deprecated_plugin_type($type)) {
+                $reportableplugins = array_filter($plugins, function($plugininfo) {
+                    return $plugininfo->versiondb != null;
+                });
+                if (empty($reportableplugins)) {
+                    continue;
+                }
+            }
+
             $heading = $pluginman->plugintype_name_plural($type);
             $pluginclass = core_plugin_manager::resolve_plugininfo_class($type);
             if ($manageurl = $pluginclass::get_manage_url()) {
@@ -1837,6 +1878,9 @@ class core_admin_renderer extends plugin_renderer_base {
                 }
                 $status = $plugin->get_status();
                 $row->attributes['class'] .= ' status-'.$status;
+                if ($plugin->is_deprecated()) {
+                    $row->attributes['class'] .= ' deprecatedtype';
+                }
                 $pluginname  = html_writer::tag('div', $icon.$plugin->displayname, array('class' => 'displayname')).
                                html_writer::tag('div', $plugin->component, array('class' => 'componentname'));
                 $pluginname  = new html_table_cell($pluginname);
@@ -1878,17 +1922,27 @@ class core_admin_renderer extends plugin_renderer_base {
                     $source = '';
                 } else {
                     $row->attributes['class'] .= ' additional';
-                    $source = html_writer::div(get_string('sourceext', 'core_plugin'), 'source badge mr-1 bg-info text-white');
+                    $source = html_writer::div(get_string('sourceext', 'core_plugin'), 'source badge me-1 text-bg-info');
                 }
 
                 if ($status === core_plugin_manager::PLUGIN_STATUS_MISSING) {
                     $row->attributes['class'] .= ' missing';
-                    $msg = html_writer::div(get_string('status_missing', 'core_plugin'), 'statusmsg badge bg-danger text-white');
+                    $msg = html_writer::div(get_string('status_missing', 'core_plugin'), 'statusmsg badge text-bg-danger');
                 } else if ($status === core_plugin_manager::PLUGIN_STATUS_NEW) {
                     $row->attributes['class'] .= ' newplugin';
-                    $msg = html_writer::div(get_string('status_new', 'core_plugin'), 'statusmsg badge bg-success text-white');
+                    $msg = html_writer::div(get_string('status_new', 'core_plugin'), 'statusmsg badge text-bg-success');
                 } else {
                     $msg = '';
+                }
+
+                $deprecatedmsg = '';
+                if ($plugin->is_deprecated()) {
+                    // Omit the status for deprecated plugin types, unless it's 'missing from disk'.
+                    $msg = $status == core_plugin_manager::PLUGIN_STATUS_MISSING ? $msg : '';
+                    $deprecatedmsg = html_writer::div(
+                        get_string('deprecated_type', 'core_plugin'),
+                        'statusmsg badge bg-danger text-white'
+                    );
                 }
 
                 $requriedby = $pluginman->other_plugins_that_require($plugin->component);
@@ -1907,7 +1961,7 @@ class core_admin_renderer extends plugin_renderer_base {
                     }
                 }
 
-                $notes = new html_table_cell($source.$msg.$requiredby.$updateinfo);
+                $notes = new html_table_cell($source.' '.$msg.' '.$deprecatedmsg.$requiredby.$updateinfo);
 
                 $row->cells = array(
                     $pluginname, $version, $availability, $settings, $uninstall, $notes
@@ -2189,10 +2243,11 @@ class core_admin_renderer extends plugin_renderer_base {
 
         $output = '';
         $output .= $this->header();
-        $output .= $this->container_start('upgradekeyreq');
         $output .= $this->heading(get_string('upgradekeyreq', 'core_admin'));
+        $output .= $this->container_start('upgradekeyreq w-25');
         $output .= html_writer::start_tag('form', array('method' => 'POST', 'action' => $url));
         $output .= html_writer::empty_tag('input', [
+            'id' => 'upgradekey',
             'name' => 'upgradekey',
             'type' => 'password',
             'class' => 'form-control w-auto',

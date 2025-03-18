@@ -23,7 +23,7 @@
  * @author     T.J.Hunt@open.ac.uk
  * @license    http://www.gnu.org/copyleft/gpl.html GNU Public License
  */
-class weblib_test extends advanced_testcase {
+final class weblib_test extends advanced_testcase {
     /**
      * @covers ::s
      */
@@ -360,7 +360,7 @@ class weblib_test extends advanced_testcase {
     /**
      * Data provider for trusttext_pre_edit() tests.
      */
-    public function trusttext_pre_edit_provider(): array {
+    public static function trusttext_pre_edit_provider(): array {
         return [
             [true, 0, 'editingteacher', FORMAT_HTML, 1],
             [true, 0, 'editingteacher', FORMAT_MOODLE, 1],
@@ -538,7 +538,7 @@ class weblib_test extends advanced_testcase {
 
         set_debugging(DEBUG_ALL);
         $this->assertEquals(DEBUG_ALL, $CFG->debug);
-        $this->assertFalse($CFG->debugdeveloper);
+        $this->assertTrue($CFG->debugdeveloper);
 
         set_debugging(DEBUG_NORMAL);
         $this->assertEquals(DEBUG_NORMAL, $CFG->debug);
@@ -629,7 +629,7 @@ EXPECTED;
     /**
      * Data provider for test_content_to_text.
      */
-    public static function provider_content_to_text() {
+    public static function provider_content_to_text(): array {
         return array(
             array('asd', false, 'asd'),
             // Trim '\r\n '.
@@ -655,7 +655,7 @@ EXPECTED;
      *
      * @return array Returns aray of test data for the test_validate_email function
      */
-    public function data_validate_email() {
+    public static function data_validate_email(): array {
         return [
             // Test addresses that should pass.
             [
@@ -823,7 +823,7 @@ EXPECTED;
     /**
      * Data provider for test_get_file_argument.
      */
-    public static function provider_get_file_argument() {
+    public static function provider_get_file_argument(): array {
         return array(
             // Serving SCORM content w/o HTTP GET params.
             array(array(
@@ -991,7 +991,7 @@ EXPECTED;
 
         $html = "<p>This is a test.</p><p><img src=\"{$url1}\" alt=\"\"></p>
                 <br>Test content.<p></p><p><img src=\"{$url2}\" alt=\"\" width=\"2048\" height=\"1536\"
-                class=\"img-fluid atto_image_button_text-bottom\"><br></p>";
+                class=\"img-fluid \"><br></p>";
         $draftareas = array(
             array(
                 'urlbase' => 'draftfile.php',
@@ -1071,7 +1071,7 @@ EXPECTED;
      *
      * @return string[][]
      */
-    public function get_html_lang_attribute_value_provider() {
+    public static function get_html_lang_attribute_value_provider(): array {
         return [
             'Empty lang code' => ['    ', 'en'],
             'English' => ['en', 'en'],
@@ -1098,7 +1098,7 @@ EXPECTED;
      *
      * @return array
      */
-    public function strip_querystring_provider(): array {
+    public static function strip_querystring_provider(): array {
         return [
             'Null' => [null, ''],
             'Empty string' => ['', ''],

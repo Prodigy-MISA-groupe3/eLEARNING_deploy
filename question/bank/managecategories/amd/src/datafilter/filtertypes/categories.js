@@ -24,22 +24,42 @@
 
 import GenericFilter from 'core/datafilter/filtertype';
 import Templates from 'core/templates';
+import {getUserPreference, setUserPreference} from 'core_user/repository';
+import Notification from 'core/notification';
+import {get_strings as getStrings} from 'core/str';
 
 export default class extends GenericFilter {
 
     SELECTORS = {
         includeSubcategories: 'input[name=category-subcategories]',
+        selectInput: 'select#filter-value-category',
+        selectInputOption: 'select#filter-value-category option',
+        validationInput: 'div[data-filter-type="category"] div.form-autocomplete-input input',
     };
 
-    constructor(filterType, rootNode, initialValues, filterOptions = {includeSubcategories: false}) {
+    /**
+     * Construct a new categoires filter
+     *
+     * @param {String} filterType The type of filter that this relates to (categories)
+     * @param {HTMLElement} rootNode The root node for the participants filterset
+     * @param {Array} initialValues The currently selected category IDs.
+     * @param {Object} filterOptions An object containing the additional options for the filter, currently "includesubcategories"
+     *     is supported, which if true will display the "Also show questions from subcategories" checkbox as checked.
+     */
+    constructor(filterType, rootNode, initialValues, filterOptions = {includesubcategories: false}) {
         super(filterType, rootNode, initialValues);
-        this.addSubcategoryCheckbox(filterOptions.includeSubcategories);
+        this.addSubcategoryCheckbox(filterOptions.includesubcategories);
     }
 
-    async addSubcategoryCheckbox(checked = false) {
+    async addSubcategoryCheckbox(checked = null) {
         const filterValueNode = this.getFilterValueNode();
+        if (checked === null || checked === undefined) {
+            checked = await getUserPreference('qbank_managecategories_includesubcategories_filter_default');
+        } else {
+            setUserPreference('qbank_managecategories_includesubcategories_filter_default', checked);
+        }
         const {html} = await Templates.renderForPromise('qbank_managecategories/include_subcategories_checkbox', {
-            checked: checked,
+            checked: checked && checked !== '0',
         });
         filterValueNode.insertAdjacentHTML('afterend', html);
     }
@@ -58,4 +78,43 @@ export default class extends GenericFilter {
             filteroptions: this.filterOptions,
         };
     }
+
+    validate() {
+
+        // Get the possible option values and filter out empty ones.
+        const nodelist = this.filterRoot.querySelectorAll(this.SELECTORS.selectInputOption);
+
+        // This gets all the values from the autocomplete's hidden select menu and filters out
+        // any which are not positive integers.
+        const validoptions = Array.from(nodelist).map(
+            option => (parseInt(option.value) > 0) ? parseInt(option.value) : false
+        ).filter(Boolean);
+
+        // Get the value supplied.
+        const value = parseInt(this.filterRoot.querySelector(this.SELECTORS.selectInput).value);
+
+        // Reset validation.
+        const node = this.filterRoot.querySelector(this.SELECTORS.validationInput);
+        node.setCustomValidity('');
+
+        // Make sure the value supplied is valid.
+        if (!validoptions.includes(value)) {
+            getStrings([
+                {
+                    key: 'error:category',
+                    component: 'qbank_managecategories',
+                },
+            ]).then((strings) => {
+                node.setCustomValidity(strings[0]);
+                node.reportValidity();
+                return strings;
+            }).catch(Notification.exception);
+
+            return false;
+        }
+
+        return true;
+
+    }
+
 }

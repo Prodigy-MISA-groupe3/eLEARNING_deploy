@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Strings for component 'reportbuilder', language 'en'
+ * Strings for component 'core_reportbuilder', language 'en'
  *
  * @package    core_reportbuilder
  * @copyright  2020 Sara Arjona <sara@moodle.com>
@@ -31,6 +31,7 @@ $string['aggregatecolumn'] = 'Aggregate column \'{$a}\'';
 $string['aggregationavg'] = 'Average';
 $string['aggregationcount'] = 'Count';
 $string['aggregationcountdistinct'] = 'Count distinct';
+$string['aggregationdate'] = 'Date';
 $string['aggregationgroupconcat'] = 'Comma separated values';
 $string['aggregationgroupconcatdistinct'] = 'Comma separated distinct values';
 $string['aggregationmax'] = 'Maximum';
@@ -200,7 +201,6 @@ $string['privacy:metadata:filter'] = 'Report filter definitions';
 $string['privacy:metadata:filter:uniqueidentifier'] = 'Unique identifier of the filter';
 $string['privacy:metadata:filter:usercreated'] = 'The ID of the user who created the filter';
 $string['privacy:metadata:filter:usermodified'] = 'The ID of the user who last modified the filter';
-$string['privacy:metadata:preference:reportfilter'] = 'Stored report filter values';
 $string['privacy:metadata:report'] = 'Report definitions';
 $string['privacy:metadata:report:conditiondata'] = 'Configuration data for the report conditions';
 $string['privacy:metadata:report:name'] = 'The name of the report';
@@ -226,6 +226,10 @@ $string['privacy:metadata:schedule:timescheduled'] = 'The time the schedule will
 $string['privacy:metadata:schedule:usercreated'] = 'The ID of the user who created the schedule';
 $string['privacy:metadata:schedule:usermodified'] = 'The ID of the user who last modified the schedule';
 $string['privacy:metadata:schedule:userviewas'] = 'The ID of the user who the schedule will be viewed as';
+$string['privacy:metadata:user_filter'] = 'Report user filter definitions';
+$string['privacy:metadata:user_filter:filterdata'] = 'Configuration data for the report filters';
+$string['privacy:metadata:user_filter:timecreated'] = 'The time when the user filter was created';
+$string['privacy:metadata:user_filter:timemodified'] = 'The time when the user filter was last modified';
 $string['recurrence'] = 'Recurrence';
 $string['recurrenceannually'] = 'Annually';
 $string['recurrencedaily'] = 'Daily';
@@ -236,6 +240,7 @@ $string['renameaudience'] = 'Rename audience \'{$a}\'';
 $string['renamecolumn'] = 'Rename column \'{$a}\'';
 $string['renamefilter'] = 'Rename filter \'{$a}\'';
 $string['reportbuilder'] = 'Report builder';
+$string['reportbuildercustomfields'] = 'Custom report fields';
 $string['reportcreated'] = 'Report created';
 $string['reportdeleted'] = 'Report deleted';
 $string['reports'] = 'Reports';
@@ -285,13 +290,13 @@ $string['userfullnamewithlink'] = 'Full name with link';
 $string['userfullnamewithpicture'] = 'Full name with picture';
 $string['userfullnamewithpicturelink'] = 'Full name with picture and link';
 $string['usermodified'] = 'Modified by';
-$string['userpicture'] = 'User picture';
 $string['userselect'] = 'Select user';
 $string['viewreport'] = 'View report';
-
-// Deprecated since Moodle 4.4.
-$string['filterdurationunit'] = '{$a} unit';
 
 // Deprecated since Moodle 4.5.
 $string['filterdatefrom'] = 'Date from';
 $string['filterdateto'] = 'Date to';
+
+// Deprecated since Moodle 5.0.
+$string['privacy:metadata:preference:reportfilter'] = 'Stored report filter values';
+$string['userpicture'] = 'User picture';

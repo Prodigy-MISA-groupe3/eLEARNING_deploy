@@ -19,16 +19,11 @@ declare(strict_types=1);
 namespace core_reportbuilder\local\helpers;
 
 use core_reportbuilder_generator;
-use core_reportbuilder_testcase;
 use core_reportbuilder\local\entities\user;
 use core_reportbuilder\local\filters\{boolean_select, date, select, text};
 use core_reportbuilder\local\report\{column, filter};
+use core_reportbuilder\tests\core_reportbuilder_testcase;
 use core_user\reportbuilder\datasource\users;
-
-defined('MOODLE_INTERNAL') || die();
-
-global $CFG;
-require_once("{$CFG->dirroot}/reportbuilder/tests/helpers.php");
 
 /**
  * Unit tests for user profile fields helper
@@ -55,7 +50,8 @@ final class user_profile_fields_test extends core_reportbuilder_testcase {
                 'defaultdata' => 0, 'visible' => PROFILE_VISIBLE_NONE]);
 
         $this->getDataGenerator()->create_custom_profile_field([
-            'shortname' => 'menu', 'name' => 'Menu field', 'datatype' => 'menu', 'param1' => "Cat\nDog", 'defaultdata' => 'Cat']);
+            'shortname' => 'menu', 'name' => 'Menu field', 'datatype' => 'menu', 'param1' => "Cat\nDog\nFish",
+                'defaultdata' => 'Cat']);
 
         $this->getDataGenerator()->create_custom_profile_field([
             'shortname' => 'Social', 'name' => 'msn', 'datatype' => 'social', 'param1' => 'msn']);
@@ -86,6 +82,13 @@ final class user_profile_fields_test extends core_reportbuilder_testcase {
             $userentity->get_table_alias('user') . '.id',
             $userentity->get_entity_name(),
         ))->get_columns();
+
+        // Create a field which will duplicate one of the subsequently generated fields (case-insensitive shortname).
+        $this->getDataGenerator()->create_custom_profile_field([
+            'shortname' => 'CHECKBOX',
+            'name' => 'Duplicate checkbox field',
+            'datatype' => 'checkbox',
+        ]);
 
         // Add new custom profile fields.
         $userprofilefields = $this->generate_userprofilefields();
@@ -128,7 +131,7 @@ final class user_profile_fields_test extends core_reportbuilder_testcase {
             true,
             true,
             true,
-            false,
+            true,
         ], array_map(
             fn(column $column): bool => $column->get_is_sortable(),
             $columns,
@@ -207,6 +210,13 @@ final class user_profile_fields_test extends core_reportbuilder_testcase {
             $userentity->get_entity_name(),
         ))->get_filters();
 
+        // Create a field which will duplicate one of the subsequently generated fields (case-insensitive shortname).
+        $this->getDataGenerator()->create_custom_profile_field([
+            'shortname' => 'CHECKBOX',
+            'name' => 'Duplicate checkbox field',
+            'datatype' => 'checkbox',
+        ]);
+
         // Add new custom profile fields.
         $userprofilefields = $this->generate_userprofilefields();
 
@@ -225,6 +235,19 @@ final class user_profile_fields_test extends core_reportbuilder_testcase {
             'Textarea field',
         ], array_map(
             fn(filter $filter): string => $filter->get_header(),
+            $filters,
+        ));
+
+        // Filter types.
+        $this->assertEquals([
+            boolean_select::class,
+            date::class,
+            select::class,
+            text::class,
+            text::class,
+            text::class,
+        ], array_map(
+            fn(filter $filter) => $filter->get_filter_class(),
             $filters,
         ));
 

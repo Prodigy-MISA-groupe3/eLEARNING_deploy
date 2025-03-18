@@ -23,6 +23,7 @@ use invalid_parameter_exception;
 use core\persistent;
 use core_reportbuilder\datasource;
 use core_reportbuilder\manager;
+use core_reportbuilder\table\{custom_report_table_view, system_report_table};
 use core_reportbuilder\local\models\{audience as audience_model, column, filter, report as report_model, schedule};
 use core_tag_tag;
 
@@ -66,6 +67,10 @@ class report {
                 $report->get_context(), $data->tags);
         }
 
+        // Report custom fields.
+        $data->id = $report->get('id');
+        \core_reportbuilder\customfield\report_handler::create()->instance_form_save($data, true);
+
         return $report;
     }
 
@@ -91,6 +96,9 @@ class report {
             core_tag_tag::set_item_tags('core_reportbuilder', 'reportbuilder_report', $report->get('id'),
                 $report->get_context(), $data->tags);
         }
+
+        // Report custom fields.
+        \core_reportbuilder\customfield\report_handler::create()->instance_form_save($data, false);
 
         return $report;
     }
@@ -175,6 +183,12 @@ class report {
                 }
             }
         }
+
+        // Duplicate custom fields.
+        $reportdata = $report->to_record();
+        \core_reportbuilder\customfield\report_handler::create()->instance_form_before_set_data($reportdata);
+        $reportdata->id = $newreport->get('id');
+        \core_reportbuilder\customfield\report_handler::create()->instance_form_save($reportdata);
 
         return $newreport;
     }
@@ -495,6 +509,25 @@ class report {
         ], 'filterorder');
 
         return static::reorder_persistents_by_field($filter, $filters, $position, 'filterorder');
+    }
+
+    /**
+     * Get total row count for given custom or system report
+     *
+     * @param int $reportid
+     * @param array $parameters Applicable for system reports only
+     * @return int
+     */
+    public static function get_report_row_count(int $reportid, array $parameters = []): int {
+        $report = new report_model($reportid);
+        if ($report->get('type') === datasource::TYPE_CUSTOM_REPORT) {
+            $table = custom_report_table_view::create($report->get('id'));
+        } else {
+            $table = system_report_table::create($report->get('id'), $parameters);
+            $table->guess_base_url();
+        }
+        $table->setup();
+        return $table->get_total_row_count();
     }
 
     /**

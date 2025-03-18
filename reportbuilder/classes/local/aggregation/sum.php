@@ -65,6 +65,19 @@ class sum extends base {
     }
 
     /**
+     * Returns aggregated column type
+     *
+     * @param int $columntype
+     * @return int
+     */
+    public static function get_column_type(int $columntype): int {
+        return match ($columntype) {
+            column::TYPE_FLOAT => column::TYPE_FLOAT,
+            default => column::TYPE_INTEGER,
+        };
+    }
+
+    /**
      * Return formatted value for column when applying aggregation
      *
      * For boolean columns we return the sum of the true values, numeric columns execute original callbacks if present
@@ -75,7 +88,7 @@ class sum extends base {
      * @param int $columntype
      * @return mixed
      */
-    public static function format_value($value, array $values, array $callbacks, int $columntype) {
+    public function format_value($value, array $values, array $callbacks, int $columntype) {
         $firstvalue = reset($values);
         if ($firstvalue === null) {
             return null;

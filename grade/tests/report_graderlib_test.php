@@ -35,7 +35,7 @@ require_once($CFG->dirroot.'/grade/report/grader/lib.php');
  * @copyright 2012 Andrew Davis
  * @license  http://www.gnu.org/copyleft/gpl.html GNU Public License
  */
-class report_graderlib_test extends \advanced_testcase {
+final class report_graderlib_test extends \advanced_testcase {
 
     /**
      * Tests grade_report_grader::process_data()
@@ -480,6 +480,9 @@ class report_graderlib_test extends \advanced_testcase {
         // Set the grade for the second one to 0 (note, you have to do this after creating it,
         // otherwise it doesn't create an ungraded grade item).
         quiz_settings::create($ungradedquiz->id)->get_grade_calculator()->update_quiz_maximum_grade(0);
+        ob_start();
+        $this->run_all_adhoc_tasks();
+        ob_end_clean();
 
         // Set current user.
         $this->setUser($manager);

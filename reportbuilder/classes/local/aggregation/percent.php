@@ -64,6 +64,16 @@ class percent extends base {
     }
 
     /**
+     * Returns aggregated column type
+     *
+     * @param int $columntype
+     * @return int
+     */
+    public static function get_column_type(int $columntype): int {
+        return column::TYPE_FLOAT;
+    }
+
+    /**
      * Return formatted value for column when applying aggregation
      *
      * @param mixed $value
@@ -72,7 +82,7 @@ class percent extends base {
      * @param int $columntype
      * @return string
      */
-    public static function format_value($value, array $values, array $callbacks, int $columntype): string {
+    public function format_value($value, array $values, array $callbacks, int $columntype): string {
         if (reset($values) === null) {
             return '';
         }

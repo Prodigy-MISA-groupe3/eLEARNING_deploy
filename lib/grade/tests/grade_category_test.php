@@ -29,7 +29,7 @@ require_once(__DIR__.'/fixtures/lib.php');
  * @copyright  nicolas@moodle.com
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class grade_category_test extends \grade_base_testcase {
+final class grade_category_test extends \grade_base_testcase {
 
     public function test_grade_category(): void {
         $this->sub_test_grade_category_construct();
@@ -444,7 +444,7 @@ class grade_category_test extends \grade_base_testcase {
         $category_grade_item = $grade_category->get_grade_item();
 
         // This creates all the grade_grades we need.
-        grade_regrade_final_grades($this->courseid);
+        grade_regrade_final_grades($this->courseid, async: true);
 
         $grade = $DB->get_record('grade_grades', array('itemid'=>$category_grade_item->id, 'userid'=>$this->userid));
         $this->assertWithinMargin($grade->rawgrade, $grade->rawgrademin, $grade->rawgrademax);

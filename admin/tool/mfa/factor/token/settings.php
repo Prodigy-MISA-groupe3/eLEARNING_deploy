@@ -26,33 +26,28 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-global $CFG;
+if ($ADMIN->fulltree) {
+    $settings->add(new admin_setting_heading('factor_token/description', '',
+        new lang_string('settings:description', 'factor_token')));
+    $settings->add(new admin_setting_heading('factor_token/settings', new lang_string('settings', 'moodle'), ''));
 
-// IOMAD
-require_once($CFG->dirroot . '/local/iomad/lib/company.php');
-$companyid = iomad::get_my_companyid(context_system::instance(), false);
-$postfix = "";
-if (!empty($companyid)) {
-    $postfix = "_$companyid";
+    $enabled = new admin_setting_configcheckbox('factor_token/enabled',
+        new lang_string('settings:enablefactor', 'tool_mfa'),
+        new lang_string('settings:enablefactor_help', 'tool_mfa'), 0);
+    $enabled->set_updatedcallback(function () {
+        \tool_mfa\manager::do_factor_action('token', get_config('factor_token', 'enabled') ? 'enable' : 'disable');
+    });
+    $settings->add($enabled);
+
+    $settings->add(new admin_setting_configtext('factor_token/weight',
+        new lang_string('settings:weight', 'tool_mfa'),
+        new lang_string('settings:weight_help', 'tool_mfa'), 100, PARAM_INT));
+
+    $settings->add(new admin_setting_configduration('factor_token/expiry',
+        new lang_string('settings:expiry', 'factor_token'),
+        new lang_string('settings:expiry_help', 'factor_token'), DAYSECS));
+
+    $settings->add(new admin_setting_configcheckbox('factor_token/expireovernight',
+        new lang_string('settings:expireovernight', 'factor_token'),
+        new lang_string('settings:expireovernight_help', 'factor_token'), 1));
 }
-
-$enabled = new admin_setting_configcheckbox('factor_token/enabled' . $postfix,
-    new lang_string('settings:enablefactor', 'tool_mfa'),
-    new lang_string('settings:enablefactor_help', 'tool_mfa'), 0);
-$enabled->set_updatedcallback(function () {
-    global $postfix;
-    \tool_mfa\manager::do_factor_action('token', get_config('factor_token', 'enabled' . $postfix) ? 'enable' : 'disable');
-});
-$settings->add($enabled);
-
-$settings->add(new admin_setting_configtext('factor_token/weight' . $postfix,
-    new lang_string('settings:weight', 'tool_mfa'),
-    new lang_string('settings:weight_help', 'tool_mfa'), 100, PARAM_INT));
-
-$settings->add(new admin_setting_configduration('factor_token/expiry' . $postfix,
-    new lang_string('settings:expiry', 'factor_token'),
-    new lang_string('settings:expiry_help', 'factor_token'), DAYSECS));
-
-$settings->add(new admin_setting_configcheckbox('factor_token/expireovernight' . $postfix,
-    new lang_string('settings:expireovernight', 'factor_token'),
-    new lang_string('settings:expireovernight_help', 'factor_token'), 1));

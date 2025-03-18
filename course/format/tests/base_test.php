@@ -23,7 +23,7 @@
  * @covers     \core_courseformat\base
  * @coversDefaultClass \core_courseformat\base
  */
-class base_test extends advanced_testcase {
+final class base_test extends advanced_testcase {
 
     /**
      * Setup to ensure that fixtures are loaded.
@@ -281,7 +281,7 @@ class base_test extends advanced_testcase {
      *
      * @return array the testing scenarios
      */
-    public function get_output_classname_provider(): array {
+    public static function get_output_classname_provider(): array {
         return [
             'overridden class' => [
                 'find' => 'state\\course',
@@ -516,7 +516,7 @@ class base_test extends advanced_testcase {
      *
      * @return array the testing scenarios
      */
-    public function delete_format_data_provider(): array {
+    public static function delete_format_data_provider(): array {
         return [
             'direct call' => [
                 'usehook' => false
@@ -541,13 +541,14 @@ class base_test extends advanced_testcase {
         $course = $generator->create_course();
         $format = course_get_format($course);
 
-        $originalsection = $DB->get_record('course_sections', ['course' => $course->id, 'section' => 1], '*', MUST_EXIST);
+        $originalsection = $DB->get_record('course_sections', ['course' => $course->id, 'section' => 0], '*', MUST_EXIST);
         $generator->create_module('page', ['course' => $course, 'section' => $originalsection->section]);
         $generator->create_module('page', ['course' => $course, 'section' => $originalsection->section]);
         $generator->create_module('page', ['course' => $course, 'section' => $originalsection->section]);
+        $generator->create_module('qbank', ['course' => $course, 'section' => $originalsection->section]);
 
         $originalmodcount = $DB->count_records('course_modules', ['course' => $course->id, 'section' => $originalsection->id]);
-        $this->assertEquals(3, $originalmodcount);
+        $this->assertEquals(4, $originalmodcount);
 
         $modinfo = get_fast_modinfo($course);
         $sectioninfo = $modinfo->get_section_info($originalsection->section, MUST_EXIST);
@@ -563,7 +564,10 @@ class base_test extends advanced_testcase {
         }
 
         $newmodcount = $DB->count_records('course_modules', ['course' => $course->id, 'section' => $newsection->id]);
-        $this->assertEquals($originalmodcount, $newmodcount);
+        $modinfo = course_modinfo::instance($course);
+        $qbankinstances = $modinfo->get_instances_of('qbank');
+        $this->assertCount(1, $qbankinstances);
+        $this->assertEquals($originalmodcount - 1, $newmodcount);
     }
 
     /**
@@ -604,7 +608,7 @@ class base_test extends advanced_testcase {
      *
      * @return array the testing scenarios
      */
-    public function get_format_string_provider(): array {
+    public static function get_format_string_provider(): array {
         return [
             'Existing in format lang' => [
                 'key' => 'addsection',
@@ -683,7 +687,7 @@ class base_test extends advanced_testcase {
      *
      * @return array the testing scenarios
      */
-    public function move_section_after_provider(): array {
+    public static function move_section_after_provider(): array {
         return [
             'Move top' => [
                 'movesection' => 'section3',
@@ -786,7 +790,10 @@ class base_test extends advanced_testcase {
             $this->expectException(\coding_exception::class);
         }
         $result = $format->get_non_ajax_cm_action_url($action, $cminfo);
-        $this->assertEquals($assign0->cmid, $result->param($expectedparam));
+        if (!$exception) {
+            $this->assertDebuggingCalled();
+        }
+        $this->assertEquals($assign0->cmid, $result->param('id'));
     }
 
     /**
@@ -794,7 +801,7 @@ class base_test extends advanced_testcase {
      *
      * @return array the testing scenarios
      */
-    public function get_non_ajax_cm_action_url_provider(): array {
+    public static function get_non_ajax_cm_action_url_provider(): array {
         return [
             'duplicate' => [
                 'action' => 'cmDuplicate',
@@ -995,6 +1002,31 @@ class base_test extends advanced_testcase {
         $this->assertTrue($format->is_section_visible($modinfostudent->get_section_info(0)));
         $this->assertFalse($format->is_section_visible($modinfostudent->get_section_info(1)));
         $this->assertFalse($format->is_section_visible($modinfostudent->get_section_info(2)));
+    }
+
+    /**
+     * Test for the get_generic_section_name method.
+     *
+     * @covers ::get_generic_section_name
+     */
+    public function test_get_generic_section_name(): void {
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+        $course1 = $generator->create_course(['format' => 'topics']);
+        $course2 = $generator->create_course(['format' => 'theunittest']);
+
+        $format = course_get_format($course1);
+        $this->assertEquals(
+            get_string('sectionname', 'format_topics'),
+            $format->get_generic_section_name()
+        );
+
+        $format = course_get_format($course2);
+        $this->assertEquals(
+            get_string('section'),
+            $format->get_generic_section_name()
+        );
     }
 
     /**

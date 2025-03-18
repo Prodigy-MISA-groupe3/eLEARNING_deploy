@@ -341,7 +341,7 @@ $string['configperfdebug'] = 'If you turn this on, performance info will be prin
 $string['configprofileroles'] = 'Roles that are listed in user profiles and on the participants page.';
 $string['configprofilesforenrolledusersonly'] = 'To prevent misuse by spammers, profile descriptions of users who are not yet enrolled in any course are hidden. New users must enrol in at least one course before they can add a profile description.';
 $string['configprotectusernames'] = 'If enabled, the forgotten password form will not display any hints allowing account usernames or email addresses to be guessed.';
-$string['configproxybypass'] = 'Comma separated list of (partial) hostnames or IPs that should bypass proxy (e.g., 192.168., .mydomain.com)';
+$string['configproxybypass'] = 'List of (partial) hostnames or IP addresses that should bypass the proxy. Separate items by a comma and no spaces, for example 192.168.0.0/16,*.mydomain.com.';
 $string['configproxyhost'] = 'If this <b>server</b> needs to use a proxy computer (eg a firewall) to access the Internet, then provide the proxy hostname here.  Otherwise leave it blank.';
 $string['configproxypassword'] = 'Password needed to access internet through proxy if required, empty if none (PHP cURL extension required).';
 $string['configproxyport'] = 'If this server needs to use a proxy computer, then provide the proxy port here.';
@@ -515,6 +515,7 @@ $string['defaulthomepage'] = 'Start page for users';
 $string['defaultrequestcategory'] = 'Default category for course requests';
 $string['defaultsettinginfo'] = 'Default: {$a}';
 $string['defaultuserroleid'] = 'Default role for all users';
+$string['deletedplugintypesdetected'] = 'A deleted plugin, \'{$a}\', was detected. This should have been migrated/uninstalled during the deprecation window. This is now an unsupported plugin type and installation/upgrade cannot continue until this plugin is uninstalled.';
 $string['deleteincompleteusers'] = 'Delete incomplete users after';
 $string['deleteunconfirmed'] = 'Delete not fully setup users after';
 $string['deleteuser'] = 'Delete user';
@@ -760,13 +761,7 @@ $string['choosefiletoedit'] = 'Choose file to edit';
 $string['h5pgetcontenttypestask'] = 'Download available H5P content types from h5p.org';
 $string['taskh5pcleanup'] = 'Unused H5P files cleanup';
 $string['iconvrequired'] = 'Installing ICONV extension is required.';
-$string['igbinary322buggyversion'] = 'The php-igbinary extension installed on the site can lead to problems when running with PHP 7.2. You are recommended to either upgrade to php-igbinary 3.2.5 or later, or alternatively to upgrade to PHP 7.3 or later.';
 $string['ignore'] = 'Ignore';
-$string['importantupdates_content'] = '<p>In the next Moodle 5.0, planned for release in April 2025, the Chat and Survey activities will
-be removed from core Moodle. They will be available as plugins in the
-<a href="https://moodle.org/plugins/">Moodle plugins directory</a>.</p>
-<p>If you wish to continue using Chat or Survey in your site, you will be able to install them as plugins before upgrading to Moodle 5.0.</p>';
-$string['importantupdates_title'] = 'Important update about Chat and Survey activities';
 $string['includemoduleuserdata'] = 'Include module user data';
 $string['incompatibleblocks'] = 'Incompatible blocks';
 $string['indexdata'] = 'Index data';
@@ -991,7 +986,6 @@ $string['opensslrecommended'] = 'Installing the optional OpenSSL library is high
 $string['opensslrequired'] = 'The OpenSSL PHP extension is now required by Moodle to provide stronger cryptographic services.';
 $string['opentowebcrawlers'] = 'Open to search engines';
 $string['optionalmaintenancemessage'] = 'Optional maintenance message';
-$string['oracledatabaseinuse'] = 'Oracle DB support is to be removed. Moodle 4.5 will be the last version with Oracle DB support. For details, see the announcement on moodle.org <a href="https://moodle.org/mod/forum/discuss.php?d=456122">Oracle database support in LMS deprecation</a>.';
 $string['order1'] = 'First';
 $string['order2'] = 'Second';
 $string['order3'] = 'Third';
@@ -1166,6 +1160,7 @@ $string['purgecachesconfirm'] = 'Moodle can cache themes, javascript, language s
 $string['purgecachesfinished'] = 'All caches were purged.';
 $string['purgecachesnoneselected'] = 'Select one or more caches to purge';
 $string['purgecachespage'] = 'Purge caches';
+$string['purgecoursecache'] = 'Courses';
 $string['purgefiltercache'] = 'Text filters';
 $string['purgejscache'] = 'JavaScript';
 $string['purgelangcache'] = 'Language strings';
@@ -1492,7 +1487,7 @@ $string['tools'] = 'Admin tools';
 $string['toolsmanage'] = 'Manage admin tools';
 $string['unattendedoperation'] = 'Unattended operation';
 $string['unbookmarkthispage'] = 'Unbookmark this page';
-$string['unicoderequired'] = 'It is required that you store all your data in Unicode format (UTF-8). New installations must be performed into databases that have their default character set as Unicode.  If you are upgrading, you should perform the UTF-8 migration process (see the Admin page).';
+$string['unicoderequired'] = 'All data must be stored in Unicode format (UTF-8). For new installations, the database must have UTF-8 as default character set. If you are upgrading, you need to follow the UTF-8 migration process.';
 $string['uninstallplugin'] = 'Uninstall';
 $string['unlockaccount'] = 'Unlock account';
 $string['unoconvwarning'] = 'The version of unoconv you have installed is not supported.';
@@ -1626,43 +1621,17 @@ $string['cachesessionhelp'] = 'User specific cache that expires when the user\'s
 $string['cacheapplication'] = 'Application cache';
 $string['cacheapplicationhelp'] = 'Cached items are shared among all users and expire by a determined time to live (ttl).';
 
-// Deprecated since Moodle 4.2.
-$string['blockunprotect'] = 'Unprotect';
-
-// Deprecated since Moodle 4.3.
-$string['configenabledevicedetection'] = 'Enables detection of mobiles, smartphones, tablets or default devices (desktop PCs, laptops, etc) for the application of themes and other features.';
-$string['devicedetectregex'] = 'Device detection regular expressions';
-$string['devicedetectregex_desc'] = '<p>By default, Moodle can detect devices of the type default (desktop PCs, laptops, etc), mobile (phones and small hand held devices), tablet (iPads, Android tablets) and legacy (Internet Explorer 6 users).  The theme selector can be used to apply separate themes to all of these.  This setting allows regular expressions that allow the detection of extra device types (these take precedence over the default types).</p>
-<p>For example, you could enter the regular expression \'/(MIDP-1.0|Maemo|Windows CE)/\' to detect some commonly used feature phones add the return value \'featurephone\'.  This adds \'featurephone\' on the theme selector that would allow you to add a theme that would be used on these devices.  Other phones would still use the theme selected for the mobile device type.</p>';
-$string['devicedetectregexexpression'] = 'Regular expression';
-$string['devicedetectregexvalue'] = 'Return value';
-$string['enabledevicedetection'] = 'Enable device detection';
-$string['selectdevice'] = 'Select device';
-$string['selecttheme'] = 'Select theme for {$a} device';
-$string['themenoselected'] = 'No theme selected';
-$string['unsettheme'] = 'Unset theme';
-
-// Deprecated since Moodle 4.4.
-$string['taskdeletecachetext'] = 'Delete old text cache records';
-$string['themesettings'] = 'Theme settings';
-$string['linkcoursesections'] = 'Always link course sections';
-$string['linkcoursesections_help'] = 'Always try to provide a link for course sections. Course sections are usually only shown as links if the course format displays a single section per page. If this setting is enabled a link will always be provided.';
-$string['moodleapp'] = 'Moodle app';
-$string['moodleapp_help'] = '<p>The free Moodle app enables users to access their courses on mobile devices. Additional app features are available with a Pro or Premium app plan.</p>
-<a href="https://moodle.com/mobile-app">Get the Moodle app</a><br />
-<a href="https://apps.moodle.com">Moodle Apps Portal</a>';
-$string['moodlebrandedapp_help'] = '<p>The Branded Moodle app has all the functionality of our free mobile app for Moodle combined with your own custom branding.</p>
-<a href="https://moodle.com/branded-app">About the Branded Moodle app</a>';
-$string['moodlepartners'] = 'Moodle Partners';
-$string['moodlepartners_help'] = '<p>Moodle Partners are services providers that are certified by Moodle HQ to provide high quality Moodle services for your organisation\'s online learning environment.</p>
-<a href="https://moodle.com/about-partners/">About our Partners</a><br />
-<a href="https://moodle.com/partners">Find a Partner</a>';
-$string['moodleservices'] = 'Moodle services';
-$string['moodleservices_help'] = 'Make sure you get the best from your Moodle learning environment by using these Moodle services:';
-
 // Deprecated since Moodle 4.5.
 $string['registration_help'] = 'By registering:
 
 * You will receive security alerts
 * You can activate mobile app push notifications from your site
 * You are contributing to our Moodle statistics of the worldwide community';
+
+// Deprecated since Moodle 5.0.
+$string['importantupdates_content'] = '<p>In the next Moodle 5.0, planned for release in April 2025, the Chat and Survey activities will
+be removed from core Moodle. They will be available as plugins in the
+<a href="https://moodle.org/plugins/">Moodle plugins directory</a>.</p>
+<p>If you wish to continue using Chat or Survey in your site, you will be able to install them as plugins before upgrading to Moodle 5.0.</p>';
+$string['importantupdates_title'] = 'Important update about Chat and Survey activities';
+$string['igbinary322buggyversion'] = 'The php-igbinary extension installed on the site can lead to problems when running with PHP 7.2. You are recommended to either upgrade to php-igbinary 3.2.5 or later, or alternatively to upgrade to PHP 7.3 or later.';

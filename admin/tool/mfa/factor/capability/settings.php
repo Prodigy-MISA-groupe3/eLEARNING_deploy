@@ -24,30 +24,26 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
-global $CFG;
 
-// IOMAD
-require_once($CFG->dirroot . '/local/iomad/lib/company.php');
-$companyid = iomad::get_my_companyid(context_system::instance(), false);
-$postfix = "";
-if (!empty($companyid)) {
-    $postfix = "_$companyid";
+if ($ADMIN->fulltree) {
+    $settings->add(new admin_setting_heading('factor_capability/description', '',
+        new lang_string('settings:description', 'factor_capability')));
+    $settings->add(new admin_setting_heading('factor_capability/settings', new lang_string('settings', 'moodle'), ''));
+
+    $enabled = new admin_setting_configcheckbox('factor_capability/enabled',
+        new lang_string('settings:enablefactor', 'tool_mfa'),
+        new lang_string('settings:enablefactor_help', 'tool_mfa'), 0);
+    $enabled->set_updatedcallback(function () {
+        \tool_mfa\manager::do_factor_action('capability', get_config('factor_capability', 'enabled') ? 'enable' : 'disable');
+    });
+    $settings->add($enabled);
+
+    $settings->add(new admin_setting_configtext('factor_capability/weight',
+        new lang_string('settings:weight', 'tool_mfa'),
+        new lang_string('settings:weight_help', 'tool_mfa'), 100, PARAM_INT));
+
+    // Admin passes bool logic is inverted due to negative capability check.
+    $settings->add(new admin_setting_configcheckbox('factor_capability/adminpasses',
+        new lang_string('settings:adminpasses', 'factor_capability'),
+        new lang_string('settings:adminpasses_help', 'factor_capability'), 1, 0, 1));
 }
-
-$enabled = new admin_setting_configcheckbox('factor_capability/enabled' . $postfix,
-    new lang_string('settings:enablefactor', 'tool_mfa'),
-    new lang_string('settings:enablefactor_help', 'tool_mfa'), 0);
-$enabled->set_updatedcallback(function () {
-    global $postfix;
-    \tool_mfa\manager::do_factor_action('capability', get_config('factor_capability', 'enabled' . $postfix) ? 'enable' : 'disable');
-});
-$settings->add($enabled);
-
-$settings->add(new admin_setting_configtext('factor_capability/weight' . $postfix,
-    new lang_string('settings:weight', 'tool_mfa'),
-    new lang_string('settings:weight_help', 'tool_mfa'), 100, PARAM_INT));
-
-// Admin passes bool logic is inverted due to negative capability check.
-$settings->add(new admin_setting_configcheckbox('factor_capability/adminpasses' . $postfix,
-    new lang_string('settings:adminpasses', 'factor_capability'),
-    new lang_string('settings:adminpasses_help', 'factor_capability'), 1, 0, 1));

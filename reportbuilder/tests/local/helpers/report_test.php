@@ -19,12 +19,14 @@ declare(strict_types=1);
 namespace core_reportbuilder\local\helpers;
 
 use advanced_testcase;
+use core\context\system;
 use core_reportbuilder_generator;
-use invalid_parameter_exception;
-use core_reportbuilder\datasource;
+use core_reportbuilder\{datasource, system_report_factory};
 use core_reportbuilder\local\models\{audience, column, filter, schedule};
+use core_reportbuilder\local\systemreports\report_access_list;
 use core_tag_tag;
 use core_user\reportbuilder\datasource\users;
+use invalid_parameter_exception;
 
 /**
  * Unit tests for the report helper class
@@ -51,8 +53,10 @@ final class report_test extends advanced_testcase {
 
         $this->assertEquals('My report with tags', $report->get('name'));
         $this->assertEquals(datasource::TYPE_CUSTOM_REPORT, $report->get('type'));
-        $this->assertEqualsCanonicalizing(['cat', 'dog'],
-            core_tag_tag::get_item_tags_array('core_reportbuilder', 'reportbuilder_report', $report->get('id')));
+        $this->assertEqualsCanonicalizing(
+            ['cat', 'dog'],
+            array_values(core_tag_tag::get_item_tags_array('core_reportbuilder', 'reportbuilder_report', $report->get('id'))),
+        );
 
         $report = report::create_report((object) [
             'name' => 'My report without tags',
@@ -96,8 +100,10 @@ final class report_test extends advanced_testcase {
 
         $this->assertEquals('My renamed report adding tags', $reportupdated->get('name'));
         $this->assertTrue($reportupdated->get('uniquerows'));
-        $this->assertEqualsCanonicalizing(['cat', 'dog'],
-            core_tag_tag::get_item_tags_array('core_reportbuilder', 'reportbuilder_report', $reportupdated->get('id')));
+        $this->assertEqualsCanonicalizing(
+            ['cat', 'dog'],
+            array_values(core_tag_tag::get_item_tags_array('core_reportbuilder', 'reportbuilder_report', $reportupdated->get('id'))),
+        );
     }
 
     /**
@@ -826,5 +832,49 @@ final class report_test extends advanced_testcase {
         $this->expectException(invalid_parameter_exception::class);
         $this->expectExceptionMessage('Invalid filter');
         report::reorder_report_filter($report->get('id'), 42, 1);
+    }
+
+    /**
+     * Test getting row count for a custom report
+     */
+    public function test_get_report_row_count_custom_report(): void {
+        $this->resetAfterTest();
+
+        $this->getDataGenerator()->create_user();
+
+        /** @var core_reportbuilder_generator $generator */
+        $generator = $this->getDataGenerator()->get_plugin_generator('core_reportbuilder');
+        $report = $generator->create_report(['name' => 'My report', 'source' => users::class]);
+
+        // There are two users, the admin plus the user we just created.
+        $this->assertEquals(2, report::get_report_row_count($report->get('id')));
+    }
+
+    /**
+     * Test getting row count for a system report
+     */
+    public function test_get_report_row_count_system_report(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $this->getDataGenerator()->create_user();
+
+        /** @var core_reportbuilder_generator $generator */
+        $generator = $this->getDataGenerator()->get_plugin_generator('core_reportbuilder');
+
+        $report = $generator->create_report(['name' => 'My report', 'source' => users::class]);
+        $generator->create_audience(['reportid' => $report->get('id'), 'configdata' => []]);
+
+        $reportaccesslist = system_report_factory::create(
+            report_access_list::class,
+            system::instance(),
+            parameters: ['id' => $report->get('id')],
+        )->get_report_persistent();
+
+        // There are two users, the admin plus the user we just created.
+        $this->assertEquals(
+            2,
+            report::get_report_row_count($reportaccesslist->get('id'), ['id' => $report->get('id')],
+        ));
     }
 }

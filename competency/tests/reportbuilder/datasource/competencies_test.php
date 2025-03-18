@@ -21,13 +21,8 @@ namespace core_competency\reportbuilder\datasource;
 use core_competency_generator;
 use core_competency\user_competency;
 use core_reportbuilder_generator;
-use core_reportbuilder_testcase;
 use core_reportbuilder\local\filters\{boolean_select, date, select, text};
-
-defined('MOODLE_INTERNAL') || die();
-
-global $CFG;
-require_once("{$CFG->dirroot}/reportbuilder/tests/helpers.php");
+use core_reportbuilder\tests\core_reportbuilder_testcase;
 
 /**
  * Unit tests for comptencies datasource
@@ -192,8 +187,8 @@ final class competencies_test extends core_reportbuilder_testcase {
                 'framework:scale_value' => '<SCALEID>',
             ], true],
             'Framework scale (no match)' => ['framework:scale', [
-                'framework:scale_operator' => select::EQUAL_TO,
-                'framework:scale_value' => -1,
+                'framework:scale_operator' => select::NOT_EQUAL_TO,
+                'framework:scale_value' => '<SCALEID>',
             ], false],
             'Framework visible' => ['framework:visible', [
                 'framework:visible_operator' => boolean_select::CHECKED,

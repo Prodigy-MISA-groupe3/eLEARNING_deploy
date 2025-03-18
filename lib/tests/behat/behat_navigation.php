@@ -1168,7 +1168,7 @@ class behat_navigation extends behat_base {
     protected function select_on_administration_page($nodelist) {
         $parentnodes = $nodelist;
         $lastnode = array_pop($parentnodes);
-        $xpath = '//section[@id=\'region-main\']';
+        $xpath = '//div[@id=\'region-main\']';
 
         // Check if there is a separate tab for this submenu of the page. If found go to it.
         if ($parentnodes) {
@@ -1295,7 +1295,7 @@ class behat_navigation extends behat_base {
             $menuxpath = $this->find_header_administration_menu() ?: $this->find_page_administration_menu();
         }
         if ($menuxpath && $this->running_javascript()) {
-            $node = $this->find('xpath', $menuxpath . '//a[@data-toggle=\'dropdown\']');
+            $node = $this->find('xpath', $menuxpath . '//a[@data-bs-toggle=\'dropdown\']');
             if ($node->isVisible()) {
                 $this->execute('behat_general::i_click_on', [$node, 'NodeElement']);
             }

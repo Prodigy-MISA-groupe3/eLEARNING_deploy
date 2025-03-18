@@ -168,6 +168,8 @@ if ($mform->is_cancelled()) {
         ];
         $activityurl = new moodle_url("/mod/$module->name/view.php", $urlparams);
         redirect($activityurl);
+    } else if (plugin_supports('mod', $module->name, FEATURE_PUBLISHES_QUESTIONS)) {
+        redirect(\core_question\local\bank\question_bank_helper::get_url_for_qbank_list($course->id));
     } else {
         $options = [];
         if (!is_null($sectionreturn)) {
@@ -192,19 +194,14 @@ if ($mform->is_cancelled()) {
         if (!empty($fromform->showgradingmanagement)) {
             $url = $fromform->gradingman->get_management_url($url);
         }
+    } else if (plugin_supports('mod', $fromform->modulename, FEATURE_PUBLISHES_QUESTIONS)) {
+        $url = \core_question\local\bank\question_bank_helper::get_url_for_qbank_list($course->id);
     } else {
         $options = [];
         if (!is_null($sectionreturn)) {
             $options['sr'] = $sectionreturn;
         }
         $url = course_get_url($course, $cw->section, $options);
-    }
-
-    // If we need to regrade the course with a progress bar as a result of updating this module,
-    // redirect first to the page that will do this.
-    if (isset($fromform->needsfrontendregrade)) {
-        $url = new moodle_url('/course/modregrade.php', ['id' => $fromform->coursemodule,
-                'url' => $url->out_as_local_url(false)]);
     }
 
     redirect($url);
