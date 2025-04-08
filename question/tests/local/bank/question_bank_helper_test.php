@@ -85,6 +85,11 @@ final class question_bank_helper_test extends \advanced_testcase {
         $sharedmod1context = \context_module::instance($sharedmod1->cmid);
         $sharedmod1qcat1 = $qgen->create_question_category(['contextid' => $sharedmod1context->id]);
         $sharedmod1qcat2 = $qgen->create_question_category(['contextid' => $sharedmod1context->id]);
+        $sharedmod1qcat2child = $qgen->create_question_category([
+            'contextid' => $sharedmod1context->id,
+            'parent' => $sharedmod1qcat2->id,
+            'name' => 'A, B, C',
+        ]);
         $privatemod1 = $privatemodgen->create_instance(['course' => $course1]);
         $privatemod1context = \context_module::instance($privatemod1->cmid);
         $privatemod1qcat1 = $qgen->create_question_category(['contextid' => $privatemod1context->id]);
@@ -95,6 +100,10 @@ final class question_bank_helper_test extends \advanced_testcase {
         $sharedmod2context = \context_module::instance($sharedmod2->cmid);
         $sharedmod2qcat1 = $qgen->create_question_category(['contextid' => $sharedmod2context->id]);
         $sharedmod2qcat2 = $qgen->create_question_category(['contextid' => $sharedmod2context->id]);
+        $sharedmod2qcat2child = $qgen->create_question_category([
+            'contextid' => $sharedmod2context->id,
+            'parent' => $sharedmod2qcat2->id,
+        ]);
         $privatemod2 = $privatemodgen->create_instance(['course' => $course2]);
         $privatemod2context = \context_module::instance($privatemod2->cmid);
         $privatemod1qcat1 = $qgen->create_question_category(['contextid' => $privatemod2context->id]);
@@ -121,7 +130,7 @@ final class question_bank_helper_test extends \advanced_testcase {
             // Must all be mod_qbanks.
             $this->assertEquals('qbank', $courseinstance->cminfo->modname);
             // Must have 2 categories each bank.
-            $this->assertCount(2, $courseinstance->questioncategories);
+            $this->assertCount(3, $courseinstance->questioncategories);
             // Must not include the bank the user does not have access to.
             $this->assertNotEquals($sharedmod3->name, $courseinstance->name);
             $this->assertNotEquals($privatemod3->name, $courseinstance->name);
@@ -149,6 +158,54 @@ final class question_bank_helper_test extends \advanced_testcase {
         }
         // Expect count of 1 bank instances.
         $this->assertEquals(1, $count);
+    }
+
+    /**
+     * We should be able to filter sharable question bank instances by name.
+     *
+     * @covers ::get_activity_instances_with_shareable_questions
+     * @return void
+     */
+    public function test_get_instances_by_name(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $user = self::getDataGenerator()->create_user();
+        $roles = $DB->get_records('role', [], '', 'shortname, id');
+        self::setUser($user);
+
+        $sharedmodgen = self::getDataGenerator()->get_plugin_generator('mod_qbank');
+        $category1 = self::getDataGenerator()->create_category();
+        $course1 = self::getDataGenerator()->create_course(['category' => $category1->id]);
+        role_assign($roles['editingteacher']->id, $user->id, \core\context\course::instance($course1->id));
+
+        $sharedmods = [];
+        for ($i = 1; $i <= 21; $i++) {
+            $sharedmods[$i] = $sharedmodgen->create_instance(['course' => $course1, 'name' => "Shared bank {$i}"]);
+        }
+        $sharedmods[22] = $sharedmodgen->create_instance(['course' => $course1, 'name' => "Another bank"]);
+
+        // We get all banks with no parameters.
+        $allsharedbanks = question_bank_helper::get_activity_instances_with_shareable_questions();
+        $this->assertCount(22, $allsharedbanks);
+
+        // Searching for "2", we get the 4 banks with "2" in the name.
+        $twobanks = question_bank_helper::get_activity_instances_with_shareable_questions(search: '2');
+        $this->assertCount(4, $twobanks);
+        $this->assertEquals(
+            [$sharedmods[2]->cmid, $sharedmods[12]->cmid, $sharedmods[20]->cmid, $sharedmods[21]->cmid],
+            array_map(fn($bank) => $bank->modid, $twobanks),
+        );
+
+        // Searching for "Shared bank" with no limit, we should get all 21, but not "Another bank".
+        $sharedbanks = question_bank_helper::get_activity_instances_with_shareable_questions(search: 'Shared bank');
+        $this->assertCount(21, $sharedbanks);
+        $this->assertEmpty(array_filter($sharedbanks, fn($bank) => in_array($bank->name, ['Another bank'])));
+
+        // Searching for "Shared bank" with a limit of 20, we should get all except number 21 and "Another bank".
+        $limitedbanks = question_bank_helper::get_activity_instances_with_shareable_questions(search: 'Shared bank', limit: 20);
+        $this->assertCount(20, $limitedbanks);
+        $this->assertEmpty(array_filter($limitedbanks, fn($bank) => in_array($bank->name, ['Shared bank 21', 'Another bank'])));
     }
 
     /**

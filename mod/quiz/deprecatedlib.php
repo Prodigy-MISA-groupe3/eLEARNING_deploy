@@ -27,21 +27,6 @@ use mod_quiz\quiz_settings;
 use mod_quiz\task\update_overdue_attempts;
 
 /**
- * @deprecated since Moodle 3.11
- */
-function quiz_get_completion_state() {
-    $completionclass = \mod_quiz\completion\custom_completion::class;
-    throw new coding_exception(__FUNCTION__ . "() has been removed, please use the '{$completionclass}' class instead");
-}
-
-/**
- * @deprecated since Moodle 4.0
- */
-function quiz_retrieve_tags_for_slot_ids() {
-    throw new coding_exception(__FUNCTION__ . '() has been removed.');
-}
-
-/**
  * Verify that the question exists, and the user has permission to use it.
  *
  * @deprecated in 4.1 use mod_quiz\structure::has_use_capability(...) instead.
@@ -313,38 +298,18 @@ function quiz_calculate_best_attempt($quiz, $attempts) {
 }
 
 /**
- * Deletes a quiz override from the database and clears any corresponding calendar events
- *
- * @deprecated since Moodle 4.4
- * @todo MDL-80944 Final deprecation in Moodle 4.8
- * @param stdClass $quiz The quiz object.
- * @param int $overrideid The id of the override being deleted
- * @param bool $log Whether to trigger logs.
- * @return bool true on success
+ * @deprecated since Moodle 4.4 MDL-80300
  */
-#[\core\attribute\deprecated('override_manager::delete_override_by_id', since: '4.4')]
+#[\core\attribute\deprecated('override_manager::delete_override_by_id', since: '4.4', mdl: '80300', final: true)]
 function quiz_delete_override($quiz, $overrideid, $log = true) {
     \core\deprecation::emit_deprecation_if_present(__FUNCTION__);
-    $quizsettings = quiz_settings::create($quiz->id);
-    $quizsettings->get_override_manager()->delete_overrides_by_id(
-        ids: [$overrideid],
-        shouldlog: $log,
-    );
-
     return true;
 }
 
 /**
- * Deletes all quiz overrides from the database and clears any corresponding calendar events
- *
- * @deprecated since Moodle 4.4
- * @todo MDL-80944 Final deprecation in Moodle 4.8
- * @param stdClass $quiz The quiz object.
- * @param bool $log Whether to trigger logs.
+ * @deprecated since Moodle 4.4 MDL-80300
  */
-#[\core\attribute\deprecated('override_manager::delete_all_overrides', since: '4.4')]
+#[\core\attribute\deprecated('override_manager::delete_all_overrides', since: '4.4', mdl: '80300', final: true)]
 function quiz_delete_all_overrides($quiz, $log = true) {
     \core\deprecation::emit_deprecation_if_present(__FUNCTION__);
-    $quizsettings = quiz_settings::create($quiz->id);
-    $quizsettings->get_override_manager()->delete_all_overrides(shouldlog: $log);
 }

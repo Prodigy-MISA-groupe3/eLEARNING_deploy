@@ -408,6 +408,8 @@ define ('PEPPER_ENTROPY', 112);
 
 /** True if module can provide a grade */
 define('FEATURE_GRADE_HAS_GRADE', 'grade_has_grade');
+/** True if module can support grade penalty */
+define('FEATURE_GRADE_HAS_PENALTY', 'grade_has_penalty');
 /** True if module supports outcomes */
 define('FEATURE_GRADE_OUTCOMES', 'outcomes');
 /** True if module supports advanced grading methods */
@@ -4760,11 +4762,12 @@ function delete_course($courseorid, $showfeedback = true) {
  * @param int $courseid The id of the course that is being deleted
  * @param bool $showfeedback Whether to display notifications of each action the function performs.
  * @param array $options extra options
+ * @param bool $coursedeletion Are we calling this as part of deleting the course?
  * @return bool true if all the removals succeeded. false if there were any failures. If this
  *             method returns false, some of the removals will probably have succeeded, and others
  *             failed, but you have no way of knowing which.
  */
-function remove_course_contents($courseid, $showfeedback = true, ?array $options = null) {
+function remove_course_contents($courseid, $showfeedback = true, ?array $options = null, bool $coursedeletion = true) {
     global $CFG, $DB, $OUTPUT;
 
     require_once($CFG->libdir.'/badgeslib.php');
@@ -4847,7 +4850,7 @@ function remove_course_contents($courseid, $showfeedback = true, ?array $options
                 foreach ($instances as $cm) {
                     if ($cm->id) {
                         // Delete activity context questions and question categories.
-                        question_delete_activity($cm);
+                        question_delete_activity($cm, coursedeletion: $coursedeletion);
                         // Notify the competency subsystem.
                         \core_competency\api::hook_course_module_deleted($cm);
 
@@ -5608,14 +5611,16 @@ function email_to_user($user, $from, $subject, $messagetext, $messagehtml = '', 
         return false;
     }
 
-    if (defined('BEHAT_SITE_RUNNING')) {
-        // Fake email sending in behat.
+    if (defined('BEHAT_SITE_RUNNING') && !defined('TEST_EMAILCATCHER_MAIL_SERVER') &&
+            !defined('TEST_EMAILCATCHER_API_SERVER')) {
+
+        // Behat tests are running and we are not using email catcher so fake email sending.
         return true;
     }
 
     if (!empty($CFG->noemailever)) {
         // Hidden setting for development sites, set in config.php if needed.
-        debugging('Not sending email due to $CFG->noemailever config setting', DEBUG_NORMAL);
+        debugging('Not sending email due to $CFG->noemailever config setting', DEBUG_DEVELOPER);
         return true;
     }
 

@@ -5,8 +5,9 @@
             "editor"
         ],
         "aiprovider": [
-            "openai",
-            "azureai"
+            "azureai",
+            "ollama",
+            "openai"
         ],
         "antivirus": [
             "clamav"
@@ -221,6 +222,9 @@
             "direct",
             "xml"
         ],
+        "gradepenalty": [
+            "duedate"
+        ],
         "gradereport": [
             "grader",
             "history",
@@ -260,7 +264,8 @@
         "message": [
             "airnotifier",
             "email",
-            "popup"
+            "popup",
+            "sms"
         ],
         "mlbackend": [
             "php",
@@ -446,7 +451,8 @@
             "solr"
         ],
         "smsgateway": [
-            "aws"
+            "aws",
+            "modica"
         ],
         "theme": [
             "boost",

@@ -6,7 +6,7 @@ More detailed information on key changes can be found in the [Developer update n
 
 The format of this change log follows the advice given at [Keep a CHANGELOG](https://keepachangelog.com).
 
-## 5.0dev+
+## 5.0rc1
 
 ### core
 
@@ -23,6 +23,17 @@ The format of this change log follows the advice given at [Keep a CHANGELOG](htt
   This prevents display of the title in all layouts except `secure`.
 
   For more information see [MDL-75610](https://tracker.moodle.org/browse/MDL-75610)
+- Behat now supports email content verification using Mailpit.
+  You can check the contents of an email using the step `Then the email to "user@example.com" with subject containing "subject" should contain "content".`
+  To use this feature:
+  1. Ensure that Mailpit is running
+  2. Define the following constants in your `config.php`:
+      - `TEST_EMAILCATCHER_MAIL_SERVER` - The Mailpit server address (e.g. `0.0.0.0:1025`)
+      - `TEST_EMAILCATCHER_API_SERVER` - The Mailpit API server (qe.g. `http://localhost:8025`)
+
+  3. Ensure that the email catcher is set up using the step `Given an email catcher server is configured`.
+
+  For more information see [MDL-75971](https://tracker.moodle.org/browse/MDL-75971)
 - A new core\ip_utils::normalize_internet_address() method is created to sanitize an IP address, a range of IP addresses, a domain name or a wildcard domain matching pattern.
 
   Moodle previously allowed entries such as 192.168. or .moodle.org for certain variables (eg: $CFG->proxybypass). Since MDL-74289, these formats are no longer allowed. This method converts this informations into an authorized format. For example, 192.168. becomes 192.168.0.0/16 and .moodle.org becomes *.moodle.org.
@@ -58,6 +69,12 @@ The format of this change log follows the advice given at [Keep a CHANGELOG](htt
 - Now lib/templates/select_menu.mustache has a new integer headinglevel context value to specify the heading level to keep the header accessibility when used as a tertiary navigation.
 
   For more information see [MDL-84208](https://tracker.moodle.org/browse/MDL-84208)
+- The new PHP enum core\output\local\properties\iconsize can be used to limit the amount of icons sizes an output component can use. The enum has the same values available in the theme_boost scss.
+
+  For more information see [MDL-84555](https://tracker.moodle.org/browse/MDL-84555)
+- A new method, `core_text::trim_ctrl_chars()`, has been introduced to clean control characters from text. This ensures cleaner input handling and prevents issues caused by invisible or non-printable characters
+
+  For more information see [MDL-84907](https://tracker.moodle.org/browse/MDL-84907)
 
 #### Changed
 
@@ -199,6 +216,18 @@ The format of this change log follows the advice given at [Keep a CHANGELOG](htt
 
   For more information see [MDL-84593](https://tracker.moodle.org/browse/MDL-84593)
 
+#### Fixed
+
+- url class now correctly supports multi level query parameter parsing and output.
+
+  This was previously supported in some methods such as get_query_string, but not others. This has been fixed to be properly supported.
+
+  For example https://example.moodle.net?test[2]=a&test[0]=b will be parsed as ['test' => [2 => 'a', 0 => 'b']]
+
+  All parameter values that are not arrays are casted to strings.
+
+  For more information see [MDL-77293](https://tracker.moodle.org/browse/MDL-77293)
+
 ### core_adminpresets
 
 #### Removed
@@ -254,6 +283,21 @@ The format of this change log follows the advice given at [Keep a CHANGELOG](htt
   For more information see [MDL-84307](https://tracker.moodle.org/browse/MDL-84307)
 
 ### core_backup
+
+#### Added
+
+- Added several hooks to the restore process to
+
+   1. Hook to allow extra settings to be defined for the course restore process.
+   2. Hook to allow adding extra fields to the copy course form.
+   3. Hook used by `copy_helper::process_formdata()` to expand the list of required fields.
+   4. Hook used to allow interaction with the copy task, before the actual task execution takes place.
+
+  Other changes include
+   1. `base_task::add_setting()` is now public to allow hook callbacks to add settings.
+   2. Settings are now added to the data sent to the course_restored event.
+
+  For more information see [MDL-83479](https://tracker.moodle.org/browse/MDL-83479)
 
 #### Removed
 
@@ -345,6 +389,9 @@ The format of this change log follows the advice given at [Keep a CHANGELOG](htt
 - Now the core_courseformat\local\content\cm\completion output is more reusable. All the HTML has been moved to its own mustache file, and the output class has a new set_smallbutton method to decide wether to rendered it as a small button (like in the course page) or as a normal one (for other types of pages).
 
   For more information see [MDL-83872](https://tracker.moodle.org/browse/MDL-83872)
+- New core_course\output\activity_icon class to render activity icons with or without purpose color. This output will centralize the way Moodle renders activity icons
+
+  For more information see [MDL-84555](https://tracker.moodle.org/browse/MDL-84555)
 
 #### Deprecated
 
@@ -416,6 +463,12 @@ The format of this change log follows the advice given at [Keep a CHANGELOG](htt
 - Deprecate the use of element ID selectors in favor of querySelector for Reactive component initialisation. We will use '#id' instead of 'id' for example.
 
   For more information see [MDL-83339](https://tracker.moodle.org/browse/MDL-83339)
+- The core_courseformat_create_module web service has been deprecated. Please use core_courseformat_new_module as its replacement.
+
+  For more information see [MDL-83469](https://tracker.moodle.org/browse/MDL-83469)
+- The state mutation addModule, primarily used for creating mod_subsection instances, has been deprecated. Replace it with newModule. Additionally, all course formats using links with data-action="addModule" must be updated to use data-action="newModule" and include a data-sectionid attribute specifying the target section ID.
+
+  For more information see [MDL-83469](https://tracker.moodle.org/browse/MDL-83469)
 - Using arrays to define course menu items is deprecated. All course formats that extend the section or activity control menus (format_NAME\output\courseformat\content\section\controlmenu or format_NAME\output\courseformat\cm\section\controlmenu) should return standard action_menu_link objects instead.
 
   For more information see [MDL-83527](https://tracker.moodle.org/browse/MDL-83527)
@@ -479,6 +532,19 @@ The format of this change log follows the advice given at [Keep a CHANGELOG](htt
 
   For more information see [MDL-84310](https://tracker.moodle.org/browse/MDL-84310)
 
+### core_files
+
+#### Added
+
+- A new function `file_clear_draft_area()` has been added to delete the files in a draft area.
+
+  For more information see [MDL-72050](https://tracker.moodle.org/browse/MDL-72050)
+- Adds a new ad-hoc task `core_files\task\asynchronous_mimetype_upgrade_task` to upgrade the mimetype of files
+  asynchronously during core upgrades. The upgradelib also comes with a new utility function
+  `upgrade_create_async_mimetype_upgrade_task` for creating said ad-hoc task.
+
+  For more information see [MDL-81437](https://tracker.moodle.org/browse/MDL-81437)
+
 ### core_form
 
 #### Changed
@@ -498,6 +564,12 @@ The format of this change log follows the advice given at [Keep a CHANGELOG](htt
   with `async: false`.
 
   For more information see [MDL-81714](https://tracker.moodle.org/browse/MDL-81714)
+
+#### Deprecated
+
+- Deprecate print_graded_users_selector() from Moodle 2 era
+
+  For more information see [MDL-84673](https://tracker.moodle.org/browse/MDL-84673)
 
 #### Removed
 
@@ -550,6 +622,12 @@ The format of this change log follows the advice given at [Keep a CHANGELOG](htt
 
 #### Changed
 
+- question_attempt_step's constructor now accepts the class constant TIMECREATED_ON_FIRST_RENDER as a value for the
+  $timecreated parameter. Calling question_attempt::render for the first time will now set the first step's timecreated
+  to the current time if it is set to this value. Note, null could not be used here as it is already used to indicate
+  timecreated should be set to the current time.
+
+  For more information see [MDL-68806](https://tracker.moodle.org/browse/MDL-68806)
 - The definition of the abstract `core_question\local\bank\condition` class has changed to make it clearer which methods are required  in child classes.
   The `get_filter_class` method is no longer declared as abstract, and will return `null` by default to use the base  `core/datafilter/filtertype` class. If you have defined this method to return `null` in your own class, it will continue to work, but it is no longer necessary.
   `build_query_from_filter` and `get_condition_key` are now declared as abstract, since all filter condition classes must define these  (as well as existing abstract methods) to function. Again, exsiting child classes will continue to work if they did before, as they  already needed these methods.
@@ -569,6 +647,28 @@ The format of this change log follows the advice given at [Keep a CHANGELOG](htt
 - Behat steps `behat_qbank_comment::i_should_see_on_the_column` and `behat_qbank_comment::i_click_on_the_row_containing` have been deprecated in favour of the new component named selectors, `qbank_comment > Comment count link` and `qbank_comment > Comment count text` which can be used with the standard `should exist` and `I click on` steps to replace the custom steps.
 
   For more information see [MDL-79122](https://tracker.moodle.org/browse/MDL-79122)
+
+#### Removed
+
+- Final deprecation of:
+    - core_question\local\bank\action_column_base::class
+    - core_question\local\bank\menu_action_column_base::class
+    - core_question\local\bank\menuable_action::interface
+    - core_question\local\bank\view::print_choose_category_message()
+    - core_question\local\bank\view::display_advanced_search_form()
+    - core_question\local\bank\view::display_showtext_checkbox()
+    - core_question\local\bank\view::init_search_conditions()
+    - core_question\local\bank\view::get_current_category()
+    - core_question\local\bank\view::display_options_form()
+    - core_question\local\bank\view::start_table()
+    - core_question\local\bank\view::end_table()
+    - core_question\statistics\questions\all_calculated_for_qubaid_condition::TIME_TO_CACHE
+    - core_question\statistics\responses\analyser::TIME_TO_CACHE
+    - core_question_bank_renderer::render_category_condition_advanced()
+    - core_question_bank_renderer::render_hidden_condition_advanced()
+    - core_question_bank_renderer::render_category_condition()
+
+  For more information see [MDL-78090](https://tracker.moodle.org/browse/MDL-78090)
 
 #### Fixed
 
@@ -841,6 +941,13 @@ The format of this change log follows the advice given at [Keep a CHANGELOG](htt
 - Assign sub-plugins have a new method `assign_plugin::settings_validation` which can be overridden to validate the data when the assignments form is saved.
 
   For more information see [MDL-83440](https://tracker.moodle.org/browse/MDL-83440)
+- There is a new method `submission_summary_for_messages()` for submission sub-plugins to summarise what has been submitted for inclusion in confirmation messages to students.
+
+  For more information see [MDL-84387](https://tracker.moodle.org/browse/MDL-84387)
+- When the assignment activity sends notifications, it now sets more information in the $a object passed to the languages strings for the message subject and body. This is to give more flexibility to people using Language Customisation. The avaiable information is the same as the template context for the two templates in the next paragraph, but without the messagetext/html.
+  Also, the overall structure of these messages is now rendered using templates mod_assign/messages/notification_html and mod_assign/messages/notification_html, so they can be overridden by themes. As a result of this, the methods format_notification_message_text and format_notification_message_html (which should have been private to mod_assign and not used anywhere else) have been removed.
+
+  For more information see [MDL-84733](https://tracker.moodle.org/browse/MDL-84733)
 
 #### Deprecated
 
@@ -966,8 +1073,26 @@ The format of this change log follows the advice given at [Keep a CHANGELOG](htt
 
 ### mod_quiz
 
+#### Added
+
+- quiz_attempt now has 2 additional state values, NOT_STARTED and SUBMITTED. These represent attempts when an attempt has been
+
+  For more information see [MDL-68806](https://tracker.moodle.org/browse/MDL-68806)
+- New quiz setting "precreateperiod" controls the period before timeopen during which attempts will be pre-created using the new
+  NOT_STARTED state. This setting is marked advanced and locked by default, so can only be set by administrators. This setting
+  is read by the \mod_quiz\task\precreate_attempts task to identify quizzes due for pre-creation.
+
+  For more information see [MDL-68806](https://tracker.moodle.org/browse/MDL-68806)
+
 #### Changed
 
+- quiz_attempt_save_started now sets the IN_PROGRESS state, timestarted, and saves the attempt, while the new quiz_attempt_save_not_started function sets the NOT_STARTED state and saves the attempt.
+
+  For more information see [MDL-68806](https://tracker.moodle.org/browse/MDL-68806)
+- quiz_attempt_save_started Now takes an additional $timenow parameter, to specify the timestart of the attempt. This was previously
+  set in quiz_create_attempt, but is now set in quiz_attempt_save_started and quiz_attempt_save_not_started.
+
+  For more information see [MDL-68806](https://tracker.moodle.org/browse/MDL-68806)
 - The `quiz_question_tostring` method now includes a new boolean parameter, `displaytaglink`. This parameter specifies whether the tag name in the question bank should be displayed as a clickable hyperlink (`true`) or as plain text (`false`).
 
   For more information see [MDL-75075](https://tracker.moodle.org/browse/MDL-75075)
@@ -981,6 +1106,29 @@ The format of this change log follows the advice given at [Keep a CHANGELOG](htt
 
   For more information see [MDL-81521](https://tracker.moodle.org/browse/MDL-81521)
 
+#### Deprecated
+
+- quiz_attempt::process_finish is now deprecated, and its functionality is split between ::process_submit, which saves the
+  submission, sets the finish time and sets the SUBMITTED status, and ::process_grade_submission which performs automated
+  grading and sets the FINISHED status.
+
+  For more information see [MDL-68806](https://tracker.moodle.org/browse/MDL-68806)
+- The webservice function `mod_quiz_get_user_attempts` is now deprecated in favour of `mod_quiz_get_user_quiz_attempts`.
+
+  With the introduction of the new NOT_STARTED quiz attempt state, `mod_quiz_get_user_attempts` has been modified to not return NOT_STARTED attempts, allowing clients such as the mobile app to continue working without modifications.
+
+  `mod_quiz_get_user_quiz_attempts` will return attempts in all states, as `mod_quiz_get_user_attempts` did before. Once clients are updated to handle NOT_STARTED attempts, they can migrate to use this function.
+
+  A minor modification to `mod_quiz_start_attempt` has been made to allow it to transparently start an existing attempt that is in the NOT_STARTED state, rather than creating a new one.
+
+  For more information see [MDL-68806](https://tracker.moodle.org/browse/MDL-68806)
+
+#### Removed
+
+- Final removal of quiz_delete_override() and quiz_delete_all_overrides()
+
+  For more information see [MDL-80944](https://tracker.moodle.org/browse/MDL-80944)
+
 ### mod_wiki
 
 #### Removed
@@ -988,6 +1136,25 @@ The format of this change log follows the advice given at [Keep a CHANGELOG](htt
 - Final deprecation of mod_wiki_renderer\wiki_info()
 
   For more information see [MDL-78926](https://tracker.moodle.org/browse/MDL-78926)
+
+### qbank
+
+#### Removed
+
+- Final deprecation of:
+    - qbank_managecategories\output\renderer::class
+    - qbank_statistics\helper::calculate_average_question_discriminative_efficiency()
+    - qbank_statistics\helper::calculate_average_question_discrimination_index()
+    - qbank_statistics\helper::get_all_places_where_questions_were_attempted()
+    - qbank_statistics\helper::calculate_average_question_stats_item()
+    - qbank_statistics\helper::calculate_average_question_facility()
+    - qbank_statistics\helper::load_statistics_for_place()
+    - qbank_statistics\helper::extract_item_value()
+    - template qbank_managecategories/category_condition_advanced
+    - template qbank_managecategories/category_condition
+    - template qbank_managecategories/listitem
+
+  For more information see [MDL-78090](https://tracker.moodle.org/browse/MDL-78090)
 
 ### qbank_bulkmove
 

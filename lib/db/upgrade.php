@@ -1574,20 +1574,6 @@ function xmldb_main_upgrade($oldversion) {
         upgrade_main_savepoint(true, 2025030600.08);
     }
 
-    // Overall step to remove chat and survey.
-    if ($oldversion < 2025031100.01) {
-        if (!file_exists($CFG->dirroot . "/mod/survey/version.php")) {
-            uninstall_plugin('mod', 'survey');
-            $DB->delete_records('adminpresets_plug', ['plugin' => 'mod', 'name' => 'survey']);
-        }
-        if (!file_exists($CFG->dirroot . "/mod/chat/version.php")) {
-            uninstall_plugin('mod', 'chat');
-            $DB->delete_records('adminpresets_plug', ['plugin' => 'mod', 'name' => 'chat']);
-        }
-        // Main savepoint reached.
-        upgrade_main_savepoint(true, 2025031100.01);
-    }
-
     if ($oldversion < 2025031800.00) {
         // Add index for querying delegated sections.
         $table = new xmldb_table('course_sections');
@@ -1598,6 +1584,89 @@ function xmldb_main_upgrade($oldversion) {
         }
         // Main savepoint reached.
         upgrade_main_savepoint(true, 2025031800.00);
+    }
+
+    if ($oldversion < 2025031800.03) {
+
+        // Define field penalty to be added to grade_grades.
+        $table = new xmldb_table('grade_grades');
+        $field = new xmldb_field('deductedmark', XMLDB_TYPE_NUMBER, '10, 5', null,
+            XMLDB_NOTNULL, null, '0', 'aggregationweight');
+
+        // Conditionally launch add field penalty.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2025031800.03);
+    }
+
+    if ($oldversion < 2025031800.04) {
+
+        // Define field overriddenmark to be added to grade_grades.
+        $table = new xmldb_table('grade_grades');
+        $field = new xmldb_field('overriddenmark', XMLDB_TYPE_NUMBER, '10, 5', null,
+            XMLDB_NOTNULL, null, '0', 'deductedmark');
+
+        // Conditionally launch add field penalty.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2025031800.04);
+    }
+
+    if ($oldversion < 2025032800.01) {
+        // Upgrade webp mime type for existing webp files.
+        upgrade_create_async_mimetype_upgrade_task('image/webp', ['webp']);
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2025032800.01);
+    }
+
+    // Remove chat and survey and respective analytics indicators.
+    if ($oldversion < 2025040100.01) {
+        $indicatorstoremove = [];
+        $sqllikes = [];
+        $sqlparams = [];
+
+        if (!file_exists($CFG->dirroot . "/mod/survey/version.php")) {
+            uninstall_plugin('mod', 'survey');
+            $DB->delete_records('adminpresets_plug', ['plugin' => 'mod', 'name' => 'survey']);
+            $indicatorstoremove['survey'] = [
+                '\mod_survey\analytics\indicator\cognitive_depth',
+                '\mod_survey\analytics\indicator\social_breadth',
+            ];
+            $sqlparams['surveypluginname'] = '%' . $DB->sql_like_escape('mod_survey') . '%';
+            $sqllikes['survey'] = $DB->sql_like('indicators', ':surveypluginname');
+        }
+        if (!file_exists($CFG->dirroot . "/mod/chat/version.php")) {
+            uninstall_plugin('mod', 'chat');
+            $DB->delete_records('adminpresets_plug', ['plugin' => 'mod', 'name' => 'chat']);
+            $indicatorstoremove['chat'] = [
+                '\mod_chat\analytics\indicator\cognitive_depth',
+                '\mod_chat\analytics\indicator\social_breadth',
+            ];
+            $sqlparams['chatpluginname'] = '%' . $DB->sql_like_escape('mod_chat') . '%';
+            $sqllikes['chat'] = $DB->sql_like('indicators', ':chatpluginname');
+        }
+
+        foreach ($indicatorstoremove as $module => $indicators) {
+            $models = $DB->get_recordset_select('analytics_models', $sqllikes[$module], $sqlparams);
+            foreach ($models as $model) {
+                $currentindicators = json_decode($model->indicators, true);
+                if (!empty($indicators) && !empty($currentindicators)) {
+                    $newindicators = array_values(array_diff($currentindicators, $indicators));
+                    $model->indicators = json_encode($newindicators);
+                    $DB->update_record('analytics_models', $model);
+                }
+            }
+            $models->close();
+        }
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2025040100.01);
     }
 
     return true;

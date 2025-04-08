@@ -505,6 +505,7 @@ function grade_get_grades($courseid, $itemtype, $itemmodule, $iteminstance, $use
                         $grade->usermodified   = $grade_grades[$userid]->usermodified;
                         $grade->datesubmitted  = $grade_grades[$userid]->get_datesubmitted();
                         $grade->dategraded     = $grade_grades[$userid]->get_dategraded();
+                        $grade->deductedmark   = $grade_grades[$userid]->deductedmark;
 
                         // create text representation of grade
                         if ($grade_item->gradetype == GRADE_TYPE_TEXT or $grade_item->gradetype == GRADE_TYPE_NONE) {

@@ -50,13 +50,6 @@ class core_calendar_renderer extends plugin_renderer_base {
     }
 
     /**
-     * @deprecated since 4.0 MDL-72810.
-     */
-    public function fake_block_threemonths() {
-        throw new coding_exception(__FUNCTION__ . '() has been removed.');
-    }
-
-    /**
      * Adds a pretent calendar block
      *
      * @param block_contents $bc
@@ -113,7 +106,7 @@ class core_calendar_renderer extends plugin_renderer_base {
         }
 
         $contextrecords = [];
-        $courses = calendar_get_default_courses($courseid, 'id, fullname');
+        $courses = calendar_get_default_courses($courseid, 'id, shortname, fullname');
 
         if (!empty($courses) && count($courses) > CONTEXT_CACHE_MAX_SIZE) {
             // We need to pull the context records from the DB to preload them
@@ -143,7 +136,7 @@ class core_calendar_renderer extends plugin_renderer_base {
             }
 
             // Limit the displayed course name to prevent the dropdown from getting too wide.
-            $coursename = format_string($course->fullname, true, [
+            $coursename = format_string(get_course_display_name_for_list($course), true, [
                 'context' => \core\context\course::instance($course->id),
             ]);
             $courseoptions[$course->id] = shorten_text($coursename, 50, true);

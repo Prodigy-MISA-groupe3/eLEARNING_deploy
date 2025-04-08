@@ -218,7 +218,8 @@ function behat_clean_init_config() {
         'umaskpermissions', 'dbtype', 'dblibrary', 'dbhost', 'dbname', 'dbuser', 'dbpass', 'prefix',
         'dboptions', 'proxyhost', 'proxyport', 'proxytype', 'proxyuser', 'proxypassword',
         'proxybypass', 'pathtogs', 'pathtophp', 'pathtodu', 'aspellpath', 'pathtodot', 'skiplangupgrade',
-        'altcacheconfigpath', 'pathtounoconv', 'alternative_file_system_class', 'pathtopython'
+        'altcacheconfigpath', 'pathtounoconv', 'alternative_file_system_class', 'pathtopython',
+        'routerconfigured',
     ));
 
     // Add extra allowed settings.
@@ -231,6 +232,12 @@ function behat_clean_init_config() {
         if (!isset($allowed[$key]) && strpos($key, 'behat_') !== 0) {
             unset($CFG->{$key});
         }
+    }
+
+    // Allow email catcher settings.
+    if (defined('TEST_EMAILCATCHER_MAIL_SERVER')) {
+        $CFG->noemailever = false;
+        $CFG->smtphosts = TEST_EMAILCATCHER_MAIL_SERVER;
     }
 }
 

@@ -1,6 +1,6 @@
 # core_question (subsystem) Upgrade notes
 
-## 5.0dev+
+## 5.0rc1
 
 ### Added
 
@@ -13,6 +13,12 @@
 
 ### Changed
 
+- question_attempt_step's constructor now accepts the class constant TIMECREATED_ON_FIRST_RENDER as a value for the
+  $timecreated parameter. Calling question_attempt::render for the first time will now set the first step's timecreated
+  to the current time if it is set to this value. Note, null could not be used here as it is already used to indicate
+  timecreated should be set to the current time.
+
+  For more information see [MDL-68806](https://tracker.moodle.org/browse/MDL-68806)
 - The definition of the abstract `core_question\local\bank\condition` class has changed to make it clearer which methods are required  in child classes.
   The `get_filter_class` method is no longer declared as abstract, and will return `null` by default to use the base  `core/datafilter/filtertype` class. If you have defined this method to return `null` in your own class, it will continue to work, but it is no longer necessary.
   `build_query_from_filter` and `get_condition_key` are now declared as abstract, since all filter condition classes must define these  (as well as existing abstract methods) to function. Again, exsiting child classes will continue to work if they did before, as they  already needed these methods.
@@ -32,6 +38,28 @@
 - Behat steps `behat_qbank_comment::i_should_see_on_the_column` and `behat_qbank_comment::i_click_on_the_row_containing` have been deprecated in favour of the new component named selectors, `qbank_comment > Comment count link` and `qbank_comment > Comment count text` which can be used with the standard `should exist` and `I click on` steps to replace the custom steps.
 
   For more information see [MDL-79122](https://tracker.moodle.org/browse/MDL-79122)
+
+### Removed
+
+- Final deprecation of:
+    - core_question\local\bank\action_column_base::class
+    - core_question\local\bank\menu_action_column_base::class
+    - core_question\local\bank\menuable_action::interface
+    - core_question\local\bank\view::print_choose_category_message()
+    - core_question\local\bank\view::display_advanced_search_form()
+    - core_question\local\bank\view::display_showtext_checkbox()
+    - core_question\local\bank\view::init_search_conditions()
+    - core_question\local\bank\view::get_current_category()
+    - core_question\local\bank\view::display_options_form()
+    - core_question\local\bank\view::start_table()
+    - core_question\local\bank\view::end_table()
+    - core_question\statistics\questions\all_calculated_for_qubaid_condition::TIME_TO_CACHE
+    - core_question\statistics\responses\analyser::TIME_TO_CACHE
+    - core_question_bank_renderer::render_category_condition_advanced()
+    - core_question_bank_renderer::render_hidden_condition_advanced()
+    - core_question_bank_renderer::render_category_condition()
+
+  For more information see [MDL-78090](https://tracker.moodle.org/browse/MDL-78090)
 
 ### Fixed
 

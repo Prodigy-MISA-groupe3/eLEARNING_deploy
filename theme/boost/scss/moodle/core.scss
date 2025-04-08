@@ -2220,6 +2220,10 @@ $footer-link-color: $bg-inverse-link-color !default;
     bottom: calc(4rem + #{$stickyfooter-height});
 }
 
+.hasstickyfooter .maintenancewarning {
+    bottom: #{$stickyfooter-height};
+}
+
 .popover.footer {
     .popover-body {
         padding: 0;
@@ -2250,6 +2254,10 @@ $footer-link-color: $bg-inverse-link-color !default;
     .jsenabled .btn-footer-communication {
         display: block;
         z-index: $zindex-dropdown;
+    }
+    .jsenabled .maintenancewarning,
+    .jsenabled.hasstickyfooter:has(.drawer-right-toggle) .maintenancewarning {
+        right: 5rem;
     }
 }
 
@@ -2995,8 +3003,13 @@ body.dragging {
             padding-left: 2.5rem;
         }
     }
-    .dropdown-item[aria-selected="true"] {
-        font-weight: bold;
+
+    .dropdown-item {
+        padding: map-get($spacers, 1) map-get($spacers, 4);
+
+        [aria-selected="true"] {
+            font-weight: bold;
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 # core (subsystem) Upgrade notes
 
-## 5.0dev+
+## 5.0rc1
 
 ### Added
 
@@ -15,6 +15,17 @@
   This prevents display of the title in all layouts except `secure`.
 
   For more information see [MDL-75610](https://tracker.moodle.org/browse/MDL-75610)
+- Behat now supports email content verification using Mailpit.
+  You can check the contents of an email using the step `Then the email to "user@example.com" with subject containing "subject" should contain "content".`
+  To use this feature:
+  1. Ensure that Mailpit is running
+  2. Define the following constants in your `config.php`:
+      - `TEST_EMAILCATCHER_MAIL_SERVER` - The Mailpit server address (e.g. `0.0.0.0:1025`)
+      - `TEST_EMAILCATCHER_API_SERVER` - The Mailpit API server (qe.g. `http://localhost:8025`)
+
+  3. Ensure that the email catcher is set up using the step `Given an email catcher server is configured`.
+
+  For more information see [MDL-75971](https://tracker.moodle.org/browse/MDL-75971)
 - A new core\ip_utils::normalize_internet_address() method is created to sanitize an IP address, a range of IP addresses, a domain name or a wildcard domain matching pattern.
 
   Moodle previously allowed entries such as 192.168. or .moodle.org for certain variables (eg: $CFG->proxybypass). Since MDL-74289, these formats are no longer allowed. This method converts this informations into an authorized format. For example, 192.168. becomes 192.168.0.0/16 and .moodle.org becomes *.moodle.org.
@@ -50,6 +61,12 @@
 - Now lib/templates/select_menu.mustache has a new integer headinglevel context value to specify the heading level to keep the header accessibility when used as a tertiary navigation.
 
   For more information see [MDL-84208](https://tracker.moodle.org/browse/MDL-84208)
+- The new PHP enum core\output\local\properties\iconsize can be used to limit the amount of icons sizes an output component can use. The enum has the same values available in the theme_boost scss.
+
+  For more information see [MDL-84555](https://tracker.moodle.org/browse/MDL-84555)
+- A new method, `core_text::trim_ctrl_chars()`, has been introduced to clean control characters from text. This ensures cleaner input handling and prevents issues caused by invisible or non-printable characters
+
+  For more information see [MDL-84907](https://tracker.moodle.org/browse/MDL-84907)
 
 ### Changed
 
@@ -190,6 +207,18 @@
 - Final deprecation and removal of \core\event\course_module_instances_list_viewed
 
   For more information see [MDL-84593](https://tracker.moodle.org/browse/MDL-84593)
+
+### Fixed
+
+- url class now correctly supports multi level query parameter parsing and output.
+
+  This was previously supported in some methods such as get_query_string, but not others. This has been fixed to be properly supported.
+
+  For example https://example.moodle.net?test[2]=a&test[0]=b will be parsed as ['test' => [2 => 'a', 0 => 'b']]
+
+  All parameter values that are not arrays are casted to strings.
+
+  For more information see [MDL-77293](https://tracker.moodle.org/browse/MDL-77293)
 
 ## 4.5
 
