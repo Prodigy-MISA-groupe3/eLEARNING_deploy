@@ -99,10 +99,6 @@ $PAGE->requires->jquery();
 // get output renderer
 $output = $PAGE->get_renderer('local_email');
 
-// Set the companyid
-$companyid = iomad::get_my_companyid($companycontext);
-$company = new company($companyid);
-
 // Set the page heading.
 if (empty($templatesetid)) {
     if (empty($manage)) {
@@ -290,12 +286,13 @@ if ($data = $mform->get_data()) {
         $templateid = $DB->insert_record('email_templateset_templates', $emailtemplate);
         $stringtemplates = $DB->get_records('email_template_strings', ['templateid' => $emailtemplate->id]);
         foreach ($stringtemplates as $stringtemplate) {
-            $stringtemplate->templateid = $emailtemplate->id;
+            $stringtemplate->templatesetid = $templateid;
             unset($stringtemplate->id);
-            $DB->insert_record('email_template_strings', $stringtemplate);
+            $DB->insert_record('email_templateset_template_strings', $stringtemplate);
         }
     }
     redirect($linkurl, get_string('emailtemplatesetsaved', 'local_email'), null, \core\output\notification::NOTIFY_SUCCESS);
+    die;
 }
 
 $buttons = "";
@@ -312,18 +309,11 @@ if (empty($manage)) {
         if ($DB->get_record('email_templateset', array('id' => $templatesetid))) {
             $backurl = new moodle_url('/local/email/template_list.php', array('finished' => true, 'manage' => 1));
             $backbutton = $output->single_button($backurl, get_string('backtocompanytemplates', 'local_email'), 'get');
-        }
-    }
-    if (empty($templatesetid)) {
-        if (iomad::has_capability('local/email:templateset_list', $companycontext)) {
-            $buttons .= $output->single_button($saveurl, get_string('savetemplateset', 'local_email'), 'get');
-            $buttons .= $output->single_button($manageurl, get_string('managetemplatesets', 'local_email'), 'get');
             $buttons .= $backbutton;
         }
     } else {
         $buttons .= $output->single_button($saveurl, get_string('savetemplateset', 'local_email'), 'get');
         $buttons .= $output->single_button($manageurl, get_string('managetemplatesets', 'local_email'), 'get');
-        $buttons .= $backbutton;
     }
 } else {
     $buttons .= $output->single_button($linkurl, get_string('back'), 'get');
@@ -392,7 +382,7 @@ if ($manage) {
     }
 
     // Set up the table.
-    $selectsql = "et.*, ets.lang, ets.subject, ets.body, ets.signature, cl.master AS templatename, ets.id as templatestringid, :prefix AS prefix";
+    $selectsql = "concat(et.id, concat('_', ets.id)) AS junk, et.*, ets.lang, ets.subject, ets.body, ets.signature, cl.master AS templatename, ets.id as templatestringid, :prefix AS prefix";
     if (empty($templatesetid)) {
         $fromsql = "{email_template} et
                     JOIN {email_template_strings} ets
