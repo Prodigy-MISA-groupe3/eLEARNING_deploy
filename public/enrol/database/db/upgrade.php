@@ -58,15 +58,19 @@ function xmldb_enrol_database_upgrade($oldversion) {
 
             // Migrate enrolments where possible.
             // First, get the user enrolments that can be migrated.
+            // Only select the earliest (MIN id) user_enrolments per user to avoid
+            // duplicate key violations when a user has multiple enrolments across
+            // duplicate database enrol instances.
             $migrateusers = $DB->get_records_sql(
-                "SELECT ue.id
+                "SELECT MIN(ue.id) AS id
                    FROM {user_enrolments} ue
                   WHERE ue.enrolid $insql
                         AND NOT EXISTS (
                             SELECT 1
                               FROM {user_enrolments} ue2
                              WHERE ue2.userid  = ue.userid
-                                   AND ue2.enrolid = :idtokeep)",
+                               AND ue2.enrolid = :idtokeep)
+                    GROUP BY ue.userid",
                     array_merge($inparams, ['idtokeep' => $idtokeep]),
             );
 
@@ -98,6 +102,9 @@ function xmldb_enrol_database_upgrade($oldversion) {
         $transaction->allow_commit();
         upgrade_plugin_savepoint(true, 2025070501, 'enrol', 'database');
     }
+
+    // Automatically generated Moodle v5.1.0 release upgrade line.
+    // Put any upgrade step following this.
 
     return true;
 }

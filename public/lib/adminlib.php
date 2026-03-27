@@ -6864,7 +6864,7 @@ class admin_setting_manageenrols extends admin_setting {
         $table->head  = array(get_string('name'), $strusage, $strversion, $strenable, $strup.'/'.$strdown, $strsettings, $strtest, $struninstall);
         $table->colclasses = array('leftalign', 'centeralign', 'centeralign', 'centeralign', 'centeralign', 'centeralign', 'centeralign', 'centeralign');
         $table->id = 'courseenrolmentplugins';
-        $table->attributes['class'] = 'admintable table generaltable';
+        $table->attributes['class'] = 'admintable table generaltable table-hover';
         $table->data  = array();
 
         // Iterate through enrol plugins and add to the display table.
@@ -7433,7 +7433,7 @@ class admin_setting_manageauths extends admin_setting {
         $table->head  = array($txt->name, $txt->users, $txt->enable, $txt->updown, $txt->settings, $txt->testsettings, $txt->uninstall);
         $table->colclasses = array('leftalign', 'centeralign', 'centeralign', 'centeralign', 'centeralign', 'centeralign', 'centeralign');
         $table->data  = array();
-        $table->attributes['class'] = 'admintable table generaltable';
+        $table->attributes['class'] = 'admintable table generaltable table-hover';
         $table->id = 'manageauthtable';
 
         //add always enabled plugins first
@@ -7634,7 +7634,7 @@ class admin_setting_manageantiviruses extends admin_setting {
         $table->head  = array($txt->name, $txt->enable, $txt->updown, $txt->settings, $struninstall);
         $table->colclasses = array('leftalign', 'centeralign', 'centeralign', 'centeralign', 'centeralign');
         $table->id = 'antivirusmanagement';
-        $table->attributes['class'] = 'admintable table generaltable';
+        $table->attributes['class'] = 'admintable table generaltable table-hover';
         $table->data  = array();
 
         // Iterate through auth plugins and add to the display table.
@@ -7799,7 +7799,7 @@ class admin_setting_manageformats extends admin_setting {
         $table = new html_table();
         $table->head  = array($txt->name, $txt->enable, $txt->updown, $txt->uninstall, $txt->settings);
         $table->align = array('left', 'center', 'center', 'center', 'center');
-        $table->attributes['class'] = 'manageformattable table generaltable admintable';
+        $table->attributes['class'] = 'manageformattable table generaltable admintable table-striped table-hover';
         $table->data  = array();
 
         $cnt = 0;
@@ -7952,7 +7952,7 @@ class admin_setting_managecustomfields extends admin_setting {
         $table = new html_table();
         $table->head  = array($txt->name, $txt->enable, $txt->uninstall, $txt->settings);
         $table->align = array('left', 'center', 'center', 'center');
-        $table->attributes['class'] = 'managecustomfieldtable table generaltable admintable';
+        $table->attributes['class'] = 'managecustomfieldtable table generaltable admintable table-striped table-hover';
         $table->data  = array();
 
         $spacer = $OUTPUT->pix_icon('spacer', '', 'moodle', array('class' => 'iconsmall'));
@@ -8078,7 +8078,7 @@ class admin_setting_managedataformats extends admin_setting {
         $table = new html_table();
         $table->head  = array($txt->name, $txt->enable, $txt->updown, $txt->uninstall, $txt->settings);
         $table->align = array('left', 'center', 'center', 'center', 'center');
-        $table->attributes['class'] = 'manageformattable table generaltable admintable';
+        $table->attributes['class'] = 'manageformattable table generaltable admintable table-striped table-hover';
         $table->data  = array();
 
         $cnt = 0;
@@ -8562,7 +8562,7 @@ class admin_setting_managemediaplayers extends admin_setting {
         $table->colclasses = array('leftalign', 'leftalign', 'centeralign',
             'centeralign', 'centeralign', 'centeralign', 'centeralign');
         $table->id = 'mediaplayerplugins';
-        $table->attributes['class'] = 'admintable table generaltable';
+        $table->attributes['class'] = 'admintable table generaltable table-hover';
         $table->data  = array();
 
         // Iterate through media plugins and add to the display table.
@@ -8744,7 +8744,7 @@ class admin_setting_managecontentbankcontenttypes extends admin_setting {
         $table = new html_table();
         $table->head  = array($txt->name, $txt->enable, $txt->order, $txt->settings, $txt->uninstall);
         $table->align = array('left', 'center', 'center', 'center', 'center');
-        $table->attributes['class'] = 'managecontentbanktable table generaltable admintable';
+        $table->attributes['class'] = 'managecontentbanktable table generaltable admintable table-hover';
         $table->data  = array();
         $spacer = $OUTPUT->pix_icon('spacer', '', 'moodle', array('class' => 'iconsmall'));
 
@@ -10040,7 +10040,7 @@ class admin_setting_manageexternalservices extends admin_setting {
             $table->head  = array($strservice, $strplugin, $strfunctions, $strusers, $stredit);
             $table->colclasses = array('leftalign service', 'leftalign plugin', 'centeralign functions', 'centeralign users', 'centeralign ');
             $table->id = 'builtinservices';
-            $table->attributes['class'] = 'admintable externalservices table generaltable';
+            $table->attributes['class'] = 'admintable externalservices table generaltable table-hover';
             $table->data  = array();
 
             // iterate through auth plugins and add to the display table
@@ -10080,7 +10080,7 @@ class admin_setting_manageexternalservices extends admin_setting {
         $table->head  = array($strservice, $strdelete, $strfunctions, $strusers, $stredit);
         $table->colclasses = array('leftalign service', 'leftalign plugin', 'centeralign functions', 'centeralign users', 'centeralign ');
         $table->id = 'customservices';
-        $table->attributes['class'] = 'admintable externalservices table generaltable';
+        $table->attributes['class'] = 'admintable externalservices table generaltable table-hover';
         $table->data  = array();
 
         // iterate through auth plugins and add to the display table
@@ -10185,7 +10185,7 @@ class admin_setting_webservicesoverview extends admin_setting {
             get_string('description'));
         $table->colclasses = array('leftalign step', 'leftalign status', 'leftalign description');
         $table->id = 'onesystemcontrol';
-        $table->attributes['class'] = 'admintable wsoverview table generaltable';
+        $table->attributes['class'] = 'admintable wsoverview table generaltable table-hover';
         $table->data = array();
 
         $return .= $brtag . get_string('onesystemcontrollingdescription', 'webservice')
@@ -10309,7 +10309,7 @@ class admin_setting_webservicesoverview extends admin_setting {
             get_string('description'));
         $table->colclasses = array('leftalign step', 'leftalign status', 'leftalign description');
         $table->id = 'userasclients';
-        $table->attributes['class'] = 'admintable wsoverview table generaltable';
+        $table->attributes['class'] = 'admintable wsoverview table generaltable table-hover';
         $table->data = array();
 
         $return .= $brtag . get_string('userasclientsdescription', 'webservice') .
@@ -10502,7 +10502,7 @@ class admin_setting_managewebserviceprotocols extends admin_setting {
         $table->head  = array($strprotocol, $strversion, $strenable, $strsettings);
         $table->colclasses = array('leftalign', 'centeralign', 'centeralign', 'centeralign', 'centeralign');
         $table->id = 'webserviceprotocols';
-        $table->attributes['class'] = 'admintable table generaltable';
+        $table->attributes['class'] = 'admintable table generaltable table-hover';
         $table->data  = array();
 
         // iterate through auth plugins and add to the display table
@@ -10657,13 +10657,13 @@ class admin_setting_configcolourpicker extends admin_setting {
             return $data;
         } else if (in_array(strtolower($data), $colornames)) {
             return $data;
-        } else if (preg_match('/rgb\(\d{0,3}%?\, ?\d{0,3}%?, ?\d{0,3}%?\)/i', $data)) {
+        } else if (preg_match('/^rgb\(\d{0,3}%?\, ?\d{0,3}%?, ?\d{0,3}%?\)$/i', $data)) {
             return $data;
-        } else if (preg_match('/rgba\(\d{0,3}%?\, ?\d{0,3}%?, ?\d{0,3}%?\, ?\d(\.\d)?\)/i', $data)) {
+        } else if (preg_match('/^rgba\(\d{0,3}%?\, ?\d{0,3}%?, ?\d{0,3}%?\, ?\d(\.\d)?\)$/i', $data)) {
             return $data;
-        } else if (preg_match('/hsl\(\d{0,3}\, ?\d{0,3}%, ?\d{0,3}%\)/i', $data)) {
+        } else if (preg_match('/^hsl\(\d{0,3}\, ?\d{0,3}%, ?\d{0,3}%\)$/i', $data)) {
             return $data;
-        } else if (preg_match('/hsla\(\d{0,3}\, ?\d{0,3}%,\d{0,3}%\, ?\d(\.\d)?\)/i', $data)) {
+        } else if (preg_match('/^hsla\(\d{0,3}\, ?\d{0,3}%, ?\d{0,3}%\, ?\d(\.\d)?\)$/i', $data)) {
             return $data;
         } else if (($data == 'transparent') || ($data == 'currentColor') || ($data == 'inherit')) {
             return $data;
@@ -11154,7 +11154,7 @@ class admin_setting_searchsetupinfo extends admin_setting {
         $table->head = array(get_string('step', 'search'), get_string('status'));
         $table->colclasses = array('leftalign step', 'leftalign status');
         $table->id = 'searchsetup';
-        $table->attributes['class'] = 'admintable table generaltable';
+        $table->attributes['class'] = 'admintable table generaltable table-hover';
         $table->data = array();
 
         $return .= $brtag . get_string('searchsetupdescription', 'search') . $brtag . $brtag;

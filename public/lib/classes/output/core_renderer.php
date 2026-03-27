@@ -213,7 +213,7 @@ class core_renderer extends renderer_base {
             $hook->add_html(
                 html_writer::empty_tag('meta', [
                     'http-equiv' => 'refresh',
-                    'content' => $this->page->periodicrefreshdelay . ';url=' . $this->page->url->out(),
+                    'content' => $this->page->periodicrefreshdelay . ';url=' . $this->page->url->out(false),
                 ]),
             );
         }
@@ -652,8 +652,8 @@ class core_renderer extends renderer_base {
             $fullname = fullname($USER);
             // Since Moodle 2.0 this link always goes to the public profile page (not the course profile page)
             if ($withlinks) {
-                $linktitle = get_string('viewprofile');
-                $username = "<a href=\"$CFG->wwwroot/user/profile.php?id=$USER->id\" title=\"$linktitle\">$fullname</a>";
+                $userurl = new moodle_url('/user/profile.php', ['id' => $USER->id]);
+                $username = html_writer::link($userurl, $fullname);
             } else {
                 $username = $fullname;
             }
@@ -1686,23 +1686,35 @@ class core_renderer extends renderer_base {
         return $this->action_link($url, $text . $icon, $action, $attributes);
     }
 
-   /**
-    * Print a message along with button choices for Continue/Cancel
-    *
-    * If a string or moodle_url is given instead of a single_button, method defaults to post.
-    *
-    * @param string $message The question to ask the user
-    * @param single_button|moodle_url|string $continue The single_button component representing the Continue answer. Can also be a moodle_url or string URL
-    * @param single_button|moodle_url|string $cancel The single_button component representing the Cancel answer. Can also be a moodle_url or string URL
-    * @param array $displayoptions optional extra display options
-    * @return string HTML fragment
-    */
+    /**
+     * Print a message along with button choices for Continue/Cancel
+     *
+     * If a string or moodle_url is given instead of a single_button, method defaults to post.
+     *
+     * @param string $message The question to ask the user
+     * @param single_button|moodle_url|string $continue The single_button component representing the Continue answer.
+     *      Can also be a moodle_url or string URL
+     * @param single_button|moodle_url|string $cancel The single_button component representing the Cancel answer.
+     *      Can also be a moodle_url or string URL
+     * @param array $displayoptions Display options (Optional).
+     *      Possible options:
+     *      - confirmtitle: The title to display above the message
+     *      - continuestr: The label to use for the continue button (if $continue is not a single_button)
+     *      - cancelstr: The label to use for the cancel button (if $cancel is not a single_button)
+     *      - headinglevel: The heading level to use for the title (1-6). Default is 4.
+     *      - type: The button type to use for the continue button (if $continue is not a single_button). Default is BUTTON_PRIMARY.
+     * @return string HTML fragment
+     */
     public function confirm($message, $continue, $cancel, array $displayoptions = []) {
 
         // Check existing displayoptions.
         $displayoptions['confirmtitle'] = $displayoptions['confirmtitle'] ?? get_string('confirm');
         $displayoptions['continuestr'] = $displayoptions['continuestr'] ?? get_string('continue');
         $displayoptions['cancelstr'] = $displayoptions['cancelstr'] ?? get_string('cancel');
+        $headinglevel = $displayoptions['headinglevel'] ?? 4;
+        if ($headinglevel < 1 || $headinglevel > 6) {
+            throw new coding_exception('The headinglevel option to $OUTPUT->confirm() must be between 1 and 6.');
+        }
 
         if ($continue instanceof single_button) {
             // Continue button should be primary if set to secondary type as it is the fefault.
@@ -1747,7 +1759,7 @@ class core_renderer extends renderer_base {
         $output = $this->box_start('generalbox modal modal-dialog modal-in-page show', 'notice', $attributes);
         $output .= $this->box_start('modal-content', 'modal-content');
         $output .= $this->box_start('modal-header px-3', 'modal-header');
-        $output .= html_writer::tag('h4', $displayoptions['confirmtitle']);
+        $output .= html_writer::tag('h' . $headinglevel, $displayoptions['confirmtitle'], ['class' => 'h4']);
         $output .= $this->box_end();
         $attributes = [
             'role' => 'alert',
@@ -1943,8 +1955,7 @@ class core_renderer extends renderer_base {
             $newwindowicon = $this->pix_icon(
                 'i/externallink',
                 get_string('opensinnewwindow'),
-                'moodle',
-                ['class' => 'fa fa-externallink fa-fw']
+                attributes: ['class' => 'ms-1'],
             );
         }
 
@@ -4249,7 +4260,7 @@ EOD;
                                     $contacttitle = 'waitingforcontactaccept';
                                 }
                                 $linkattributes = array_merge($linkattributes, [
-                                    'class' => 'disabled',
+                                    'class' => 'disabled border-0',
                                     'tabindex' => '-1',
                                 ]);
                             } else {

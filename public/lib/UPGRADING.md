@@ -1,5 +1,46 @@
 # core (subsystem) Upgrade notes
 
+## 5.1.2
+
+### Added
+
+- There is a new Behat `toast_message` named selector to more easily assert the presence of Toast messages on the page
+
+  For more information see [MDL-87443](https://tracker.moodle.org/browse/MDL-87443)
+
+### Changed
+
+- `\core\output\core_renderer::confirm()`'s `$displayoptions` parameter now also accepts a `headinglevel` option that developers can use to specify the heading level of the confirmation's heading. If not specified, the confirmation heading will be rendered in an `h4` tag.
+
+  For more information see [MDL-87694](https://tracker.moodle.org/browse/MDL-87694)
+
+## 5.1.1
+
+### Added
+
+- Added clean_string() that prevents double escaping in Mustache templates
+
+  For more information see [MDL-87066](https://tracker.moodle.org/browse/MDL-87066)
+
+### Changed
+
+- The Hook Manager now uses localcache instead of caching via MUC.
+
+  For more information see [MDL-87107](https://tracker.moodle.org/browse/MDL-87107)
+
+### Fixed
+
+- `restore_qtype_plugin::unset_excluded_fields` now returns the modified questiondata structure,
+  in order to support structures that contain arrays.
+  If your qtype plugin overrides `restore_qtype_plugin::remove_excluded_question_data` without
+  calling the parent method, you may need to modify your overridden method to use the returned
+  value.
+
+  For more information see [MDL-85975](https://tracker.moodle.org/browse/MDL-85975)
+- When responding to pcntl signals, call existing signal handlers.
+
+  For more information see [MDL-87079](https://tracker.moodle.org/browse/MDL-87079)
+
 ## 5.1
 
 ### Added
