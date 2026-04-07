@@ -23,7 +23,7 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-use block_iomad_company_admin\event\{company_created, dashboard_page_viewed};
+use block_iomad_company_admin\event\dashboard_page_viewed;
 use block_iomad_company_admin\forms\company_import_form;
 use local_iomad\{company, company_user, iomad};
 use local_iomad\custom_context\context_company;
@@ -82,27 +82,29 @@ $PAGE->set_heading(get_string('companyimportfromfile', 'block_iomad_company_admi
 dashboard_page_viewed::create_from_url($PAGE->url->out())->trigger();
 
 // Array of all valid fields for CSV validation.
-$stdfields = ['name',
-              'shortname',
-              'code',
-              'address',
-              'city',
-              'region',
-              'postcode',
-              'country',
-              'parent',
-              'theme',
-              'hostname',
-              'maxusers',
-              'validto',
-              'suspendafter',
-              'custom1',
-              'custom2',
-              'custom3',
-              'customcss',
-              'maincolor',
-              'headingcolor',
-              'linkcolor'];
+$stdfields = [
+    'name',
+    'shortname',
+    'code',
+    'address',
+    'city',
+    'region',
+    'postcode',
+    'country',
+    'parent',
+    'theme',
+    'hostname',
+    'maxusers',
+    'validto',
+    'suspendafter',
+    'custom1',
+    'custom2',
+    'custom3',
+    'customcss',
+    'maincolor',
+    'headingcolor',
+    'linkcolor',
+];
 
 // Process the uploaded file.
 if (empty($iid)) {
@@ -423,46 +425,12 @@ if (empty($iid)) {
                 $companyrec->parentid = $companyid;
             }
 
-            // We hit create.
-            $newcompanyid = $DB->insert_record('local_iomad_companies', $companyrec);
-            $newcompany = new company($newcompanyid);
+            // Create company.
+            $newcompany = company::create_company($companyrec);
 
-            $eventother = ['companyid' => $newcompanyid];
-
-            $event = company_created::create([
-                'context' => $systemcontext,
-                'userid' => $USER->id,
-                'objectid' => $newcompanyid,
-                'other' => $eventother,
-            ]);
-            $event->trigger();
-
-            // Set up default department.
-            company::initialise_departments($newcompanyid);
-
-            // Set up course category for company.
-            $coursecat = new stdclass();
-            $coursecat->name = $companyrec->name;
-            $coursecat->sortorder = 999;
-            $coursecat->id = $DB->insert_record('course_categories', $coursecat);
-            $coursecat->context = context_coursecat::instance($coursecat->id);
-            $categorycontext = $coursecat->context;
-            $categorycontext->mark_dirty();
-            $DB->update_record('course_categories', $coursecat);
-            fix_course_sortorder();
-            $companydetails = $DB->get_record('local_iomad_companies', ['id' => $newcompanyid]);
-            $companydetails->category = $coursecat->id;
-            $DB->update_record('local_iomad_companies', $companydetails);
-
-            // Deal with any parent company assignments.
-            if (!empty($companydetails->parentid)) {
-                $company = new company($companydetails->id);
-                $company->assign_parent_managers($companydetails->parentid);
-            }
-
-            $upt->track('id', $newcompanyid);
+            // Track company created OK.
+            $upt->track('id', $newcompany->id);
             $upt->track('status', get_string('ok'));
-
         }
 
         $upt->flush();
@@ -514,30 +482,32 @@ class upload_progress_tracker {
     public $_row;
 
     /** @var list of possible column names */
-    public $columns = ['status',
-                       'line',
-                       'id',
-                       'name',
-                       'shortname',
-                       'code',
-                       'address',
-                       'city',
-                       'region',
-                       'postcode',
-                       'country',
-                       'parent',
-                       'theme',
-                       'hostname',
-                       'maxusers',
-                       'validto',
-                       'suspendafter',
-                       'custom1',
-                       'custom2',
-                       'custom3',
-                       'customcss',
-                       'maincolor',
-                       'headingcolor',
-                       'linkcolor'];
+    public $columns = [
+        'status',
+        'line',
+        'id',
+        'name',
+        'shortname',
+        'code',
+        'address',
+        'city',
+        'region',
+        'postcode',
+        'country',
+        'parent',
+        'theme',
+        'hostname',
+        'maxusers',
+        'validto',
+        'suspendafter',
+        'custom1',
+        'custom2',
+        'custom3',
+        'customcss',
+        'maincolor',
+        'headingcolor',
+        'linkcolor',
+    ];
 
     /**
      * Class initialisation
@@ -571,6 +541,14 @@ class upload_progress_tracker {
         echo html_writer::tag(
             'th',
             get_string('uucsvline', 'tool_uploaduser'),
+            [
+                'class' => 'header c' . $ci++,
+                'scope' => "col",
+            ]
+        );
+        echo html_writer::tag(
+            'th',
+            get_string('companyid', 'block_iomad_company_admin'),
             [
                 'class' => 'header c' . $ci++,
                 'scope' => "col",
