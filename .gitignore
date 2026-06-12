@@ -20,6 +20,8 @@
 *~
 #
 /config.php
+/.env
+/migration/backup/
 /tags
 /TAGS
 /cscope.*

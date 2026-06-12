@@ -1,0 +1,26 @@
+.git
+.github
+node_modules
+.phpunit.cache
+.phpunit.result.cache
+vendor
+*.md
+.nvmrc
+.grunt
+phpunit.xml
+.stylelintrc
+.eslintrc
+.eslintignore
+
+# Ne jamais embarquer les secrets ni la config locale dans l'image
+.env
+config.php
+public/config.php.local
+
+# Fichiers Docker (pas utiles dans le contexte de build)
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Scripts + archives de migration (hors image)
+migration

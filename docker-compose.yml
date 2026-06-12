@@ -1,0 +1,23 @@
+services:
+  iomad:
+    container_name: iomad
+    build: .
+    restart: unless-stopped
+    # Toutes les variables (DB externe, admin, PHP tuning) viennent du .env
+    env_file: .env
+    volumes:
+      # Thèmes + plugins uploadés via l'UI -> persistés (survit aux rebuilds)
+      - iomad_public:/var/www/html/public
+      # Fichiers users, cache, sessions
+      - moodledata:/var/www/moodledata
+    networks:
+      - dokploy-network
+
+volumes:
+  iomad_public:
+  moodledata:
+
+# DB PostgreSQL gérée à l'extérieur (Dokploy). On rejoint son réseau.
+networks:
+  dokploy-network:
+    external: true
