@@ -5,6 +5,11 @@ services:
     restart: unless-stopped
     # Toutes les variables (DB externe, admin, PHP tuning) viennent du .env
     env_file: .env
+    # Accès UNIQUEMENT via le VPN ZeroTier : le port n'est publié QUE sur l'IP
+    # du VPN (jamais sur 0.0.0.0). Rien n'est joignable sur les autres interfaces.
+    # -> http://${ZEROTIER_IP}:${APP_PORT}
+    ports:
+      - "${ZEROTIER_IP:-10.95.135.150}:${APP_PORT:-4000}:80"
     volumes:
       # Thèmes + plugins uploadés via l'UI -> persistés (survit aux rebuilds)
       - iomad_public:/var/www/html/public
