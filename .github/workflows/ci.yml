@@ -1,0 +1,21 @@
+name: CI - Build check
+
+# eLearning is a PHP/Apache image (IOMAD) — there is no npm app build.
+# GitHub only VALIDATES that the image builds; it never pushes.
+# Building and pushing the production image is GitLab's job (.gitlab-ci.yml).
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  build-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build the image (no push)
+        run: docker build -t iomad:ci-check .
