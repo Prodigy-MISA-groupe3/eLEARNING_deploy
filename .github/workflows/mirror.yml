@@ -1,0 +1,32 @@
+name: Mirror to GitLab
+
+# Mirror code to the client's GitLab (misa-3).
+# GitHub stays the build platform; here we only copy the code.
+
+on:
+  push:
+    branches: [main, dev]
+    tags: ['*']
+
+# Prevent two concurrent mirrors on the same ref (avoids push conflicts).
+concurrency:
+  group: mirror-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history, else the mirror is truncated
+
+      - name: Push current ref to GitLab
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}   # PAT, scope write_repository
+          GITLAB_REPO:  ${{ vars.GITLAB_REPO }}       # e.g. .../elearning.git
+        run: |
+          git push --force \
+            "https://oauth2:${GITLAB_TOKEN}@${GITLAB_REPO}" \
+            "HEAD:${GITHUB_REF}"
