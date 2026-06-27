@@ -1,54 +1,33 @@
 # =====================================================================
 #  GitLab CI/CD — eLearning (IOMAD / Moodle, PHP/Apache image)
 #
-#  Role split in our chain:
-#    - GitHub : validates that the image builds. No push.
-#    - GitLab : SECURITY (shift-left) + BUILD/PUSH of the Docker image (PROD).
+#  We only DEPLOY a third-party app (IOMAD/Moodle); we do not maintain its
+#  source code. So no source/secret scan and no image CVE scan here — we just
+#  build and publish the deployment image.
 #
-#  Triggered by the GitHub -> GitLab mirror (mirror.yml).
+#  Role split:
+#    - GitHub : mirrors the code to GitLab (mirror.yml). Nothing else.
+#    - GitLab : BUILD/PUSH of the Docker image (PROD: main and tags).
+#
+#  Triggered by the GitHub -> GitLab mirror.
 #
 #  Prerequisites on the GitLab project:
 #    - Container Registry enabled (Settings > General > Visibility).
+#    - A runner that supports Docker-in-Docker (privileged).
 #    - Variables provided AUTOMATICALLY by GitLab (nothing to create):
 #        CI_REGISTRY, CI_REGISTRY_USER, CI_REGISTRY_PASSWORD, CI_REGISTRY_IMAGE
 # =====================================================================
 
 stages:
-  - security      # shift-left gate: secret leaks
-  - build         # Docker image: build -> Trivy scan -> push (PROD)
+  - build
 
-# Only create pipelines on main, dev and tags.
-# (The mirror pushes every branch; this avoids noise and CI cost.)
+# Build the production image only on main and tags.
+# Other refs (e.g. dev) are just mirrored, no pipeline.
 workflow:
   rules:
     - if: '$CI_COMMIT_TAG'
     - if: '$CI_COMMIT_BRANCH == "main"'
-    - if: '$CI_COMMIT_BRANCH == "dev"'
 
-# ---------------------------------------------------------------------
-# 1) Secret leaks — gitleaks (scans the WHOLE git history)
-#    Blocking: a committed secret must never pass.
-#    Known false positive: add a .gitleaks.toml allowlist.
-# ---------------------------------------------------------------------
-secret_scan:
-  stage: security
-  image: alpine:3.20
-  variables:
-    GITLEAKS_VERSION: "8.18.4"
-    GIT_DEPTH: "0"            # full clone => scan the whole history
-  before_script:
-    - apk add --no-cache git curl tar
-    - curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz -C /usr/local/bin gitleaks
-  script:
-    - gitleaks detect --source . --redact --verbose
-
-# Note: no npm/composer SCA here. IOMAD is a large PHP codebase without a
-# standard runtime lockfile to audit; image CVEs are covered by Trivy below.
-
-# ---------------------------------------------------------------------
-# 2) Docker image — build + Trivy scan + push (PROD: main and tags)
-#    Trivy blocks the push on a fixable CRITICAL/HIGH finding.
-# ---------------------------------------------------------------------
 build_image:
   stage: build
   image: docker:27
@@ -56,7 +35,6 @@ build_image:
     - docker:27-dind
   variables:
     DOCKER_TLS_CERTDIR: "/certs"
-    TRIVY_VERSION: "0.55.0"
   rules:
     - if: '$CI_COMMIT_TAG'
       variables:
@@ -65,15 +43,9 @@ build_image:
       variables:
         IMAGE_TAG: "latest"
   before_script:
-    - apk add --no-cache curl
-    - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin "v${TRIVY_VERSION}"
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
-    # 1. build: a readable tag (latest / vX.Y.Z) + an immutable tag (short SHA)
+    # readable tag (latest / vX.Y.Z) + immutable tag (short SHA)
     - docker build -t "$CI_REGISTRY_IMAGE:$IMAGE_TAG" -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA" .
-    # 2. scan BEFORE push (image exported to tar -> no docker daemon needed)
-    - docker save "$CI_REGISTRY_IMAGE:$IMAGE_TAG" -o image.tar
-    - trivy image --input image.tar --severity CRITICAL,HIGH --exit-code 1 --ignore-unfixed
-    # 3. push to the GitLab Container Registry (misa-3)
     - docker push "$CI_REGISTRY_IMAGE:$IMAGE_TAG"
     - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
